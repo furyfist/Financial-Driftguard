@@ -226,16 +226,20 @@ class RegimeLabeller:
         if recession_signals >= 2:
             return "recession", round(recession_signals / 3, 2), recession_signals
 
-        # rate_shock: in Fed tightening cycle
-        # Elevated VIX not required — rate shocks can happen with low volatility
+        # rate_shock: in Fed tightening cycle AND market showing stress
+        # Pure rate hike into calm market = stable, not rate_shock
+        # Requires VIX above calm threshold as minimum condition
         if in_rate_shock:
-            supporting = sum([
-                vix >= _VIX_ELEVATED,
-                spread >= _SPREAD_NORMAL,
-                yield_curve < 1.0,  # flattening curve accompanies rate hikes
+            stress_present = sum([
+                vix >= _VIX_ELEVATED,           # market pricing in risk
+                spread >= _SPREAD_NORMAL,        # credit conditions tightening
+                yield_curve < 0.5,              # curve flattening under hikes
             ])
-            confidence = round(0.4 + (supporting / 3) * 0.4, 2)
-            return "rate_shock", confidence, supporting
+            # Only label rate_shock if at least 2 stress signals present
+            # Pure hiking into calm = stable
+            if stress_present >= 2:
+                confidence = round(0.4 + (stress_present / 3) * 0.4, 2)
+                return "rate_shock", confidence, stress_present
 
         # credit_stress: elevated VIX or spread above normal
         # Uses recalibrated _SPREAD_NORMAL = 2.80 (75th pct) — not 1.5
