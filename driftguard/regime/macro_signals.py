@@ -93,14 +93,27 @@ class MacroSignalFetcher:
             return None
 
     def _fetch_fred(self, signal: str, as_of: date) -> Optional[float]:
+        # Fallback series for monthly data with lag issues
+        _FALLBACK = {
+            "fed_funds_rate": "DFF",   # daily fed funds vs monthly FEDFUNDS
+        }
         try:
             series_id = self._FRED_SERIES[signal]
             series = self._fred.get_series(
                 series_id,
-                observation_start=str(as_of.replace(day=1)),  # from month start
+                observation_start=str(as_of.replace(day=1)),
                 observation_end=str(as_of),
             )
-            if series.empty:
+            if series.empty or series.dropna().empty:
+                # try fallback series if available
+                fallback_id = _FALLBACK.get(signal)
+                if fallback_id:
+                    series = self._fred.get_series(
+                        fallback_id,
+                        observation_start=str(as_of.replace(day=1)),
+                        observation_end=str(as_of),
+                    )
+            if series.empty or series.dropna().empty:
                 return None
             return round(float(series.dropna().iloc[-1]), 4)
         except Exception as e:
