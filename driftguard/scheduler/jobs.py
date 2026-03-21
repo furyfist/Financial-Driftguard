@@ -11,10 +11,11 @@ from ..store.database import (
 )
 from ..core.monitor import Monitor
 from ..core.snapshot import DataSnapshot
+from ..notifications.base import BaseNotifier, NotificationPayload
 
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
-
+_notifiers: dict[str | None, list[BaseNotifier]] = {}
 
 def register_baseline(model_id: str, snapshot: DataSnapshot):
     """
@@ -132,13 +133,21 @@ def run_drift_check(model_id: str, current: DataSnapshot):
             session.add(alert)
             session.commit()
 
-    logger.info(
-        f"Drift check — {model_id} | "
-        f"severity={result.overall_severity.value} | "
-        f"score={result.drift_score} | "
-        f"regime={result.regime}"
-    )
-    return result
+        logger.info(
+            f"Drift check — {model_id} | "
+            f"severity={result.overall_severity.value} | "
+            f"score={result.drift_score} | "
+            f"regime={result.regime}"
+        )
+
+        # Dispatch notifications
+        notifiers = _get_notifiers_for_model(model_id)
+        if notifiers:
+            payload = _build_payload(result, model_id)
+            for notifier in notifiers:
+                notifier.notify(payload)
+
+        return result
 
 
 def restore_baselines_from_db():
@@ -190,6 +199,62 @@ def start_scheduler(interval_minutes: int = 30):
 
     scheduler.start()
     logger.info(f"Scheduler started — drift checks every {interval_minutes} min, macro every 6h")
+
+def register_notifier(
+    notifier: BaseNotifier,
+    model_id: str | None = None,
+):
+    """
+    Register a notifier for a specific model or all models.
+
+    Usage:
+        # notify on all models
+        register_notifier(DiscordNotifier(webhook_url="..."))
+
+        # notify only for a specific model
+        register_notifier(SlackNotifier(webhook_url="..."), model_id="lending_club_v1")
+    """
+    key = model_id
+    if key not in _notifiers:
+        _notifiers[key] = []
+    _notifiers[key].append(notifier)
+    logger.info(
+        f"Notifier registered: {notifier.name} "
+        f"for {'all models' if model_id is None else model_id}"
+    )
+
+
+def _get_notifiers_for_model(model_id: str) -> list[BaseNotifier]:
+    """Returns notifiers for a specific model + global notifiers."""
+    return _notifiers.get(model_id, []) + _notifiers.get(None, [])
+
+
+def _build_payload(result, model_id: str) -> NotificationPayload:
+    """Build NotificationPayload from a DriftResult."""
+    psi_results = [
+        f for f in result.feature_results
+        if f.detector == "psi" and f.severity.value != "none"
+    ]
+    psi_results.sort(key=lambda x: x.score, reverse=True)
+
+    return NotificationPayload(
+        model_id=model_id,
+        overall_severity=result.overall_severity.value,
+        drift_score=result.drift_score,
+        regime=result.regime or "unknown",
+        regime_confidence=0.0,
+        recommendation=result.notes or "",
+        top_features=[
+            {
+                "feature":  f.feature_name,
+                "score":    f.score,
+                "severity": f.severity.value,
+            }
+            for f in psi_results[:5]
+        ],
+        checked_at=result.checked_at.isoformat(),
+    )
+
 
 def stop_scheduler():
     if scheduler.running:

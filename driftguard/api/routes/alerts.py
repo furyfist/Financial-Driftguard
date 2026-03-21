@@ -1,11 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, desc
+from pydantic import BaseModel as PydanticBase
 
+from ...scheduler.jobs import register_notifier
+from ...notifications.discord import DiscordNotifier
+from ...notifications.slack import SlackNotifier
 from ...store.database import AlertRecord, get_session
 from ..schemas import AlertOut, AckRequest
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
+class WebhookConfig(PydanticBase):
+    platform:           str          # "discord" or "slack"
+    webhook_url:        str
+    model_id:           str | None = None
+    severity_threshold: str = "high"
 
 @router.get("/", response_model=list[AlertOut])
 def list_alerts(
@@ -36,3 +45,33 @@ def acknowledge_alert(payload: AckRequest, session: Session = Depends(get_sessio
     session.add(alert)
     session.commit()
     return {"acknowledged": payload.alert_id}
+
+@router.post("/webhooks/configure")
+def configure_webhook(payload: WebhookConfig):
+    """
+    Register a webhook notifier at runtime.
+    Persists for the lifetime of the server process.
+    """
+    if payload.platform == "discord":
+        notifier = DiscordNotifier(
+            webhook_url=payload.webhook_url,
+            severity_threshold=payload.severity_threshold,
+        )
+    elif payload.platform == "slack":
+        notifier = SlackNotifier(
+            webhook_url=payload.webhook_url,
+            severity_threshold=payload.severity_threshold,
+        )
+    else:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown platform '{payload.platform}'. Use 'discord' or 'slack'."
+        )
+
+    register_notifier(notifier, model_id=payload.model_id)
+    return {
+        "configured": payload.platform,
+        "model_id":   payload.model_id or "all models",
+        "threshold":  payload.severity_threshold,
+    }
