@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+from driftguard.regime.features import build_features, feature_names
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -81,3 +82,28 @@ print(f"\nVIX during known regimes:")
 print(f"  GFC (2007-2009) VIX mean:      {gfc['vix'].mean():.2f}")
 print(f"  COVID (2020 Q1) VIX mean:      {covid['vix'].mean():.2f}")
 print(f"  Calm (2012-2014) VIX mean:     {calm['vix'].mean():.2f}")
+
+print(f"\nFeature engineering validation:")
+features = build_features(df)
+print(f"  Input rows:   {len(df):,}")
+print(f"  Output rows:  {len(features):,}  (dropped {len(df)-len(features)} warmup rows)")
+print(f"  Features:     {len(features.columns)}")
+print(f"\nFeature names:")
+for name in feature_names():
+    print(f"  {name}")
+
+print(f"\nSample — GFC peak (2008-10-15):")
+if "2008-10-15" in features.index.strftime("%Y-%m-%d").tolist():
+    row = features[features.index.strftime("%Y-%m-%d") == "2008-10-15"].iloc[0]
+    print(f"  vix:              {row['vix']:.2f}")
+    print(f"  vix_zscore:       {row['vix_zscore']:.2f}")
+    print(f"  composite_stress: {row['composite_stress']:.3f}")
+    print(f"  spread_21d_change:{row['spread_21d_change']:.3f}")
+
+print(f"\nSample — calm period (2014-01-02):")
+if "2014-01-02" in features.index.strftime("%Y-%m-%d").tolist():
+    row = features[features.index.strftime("%Y-%m-%d") == "2014-01-02"].iloc[0]
+    print(f"  vix:              {row['vix']:.2f}")
+    print(f"  vix_zscore:       {row['vix_zscore']:.2f}")
+    print(f"  composite_stress: {row['composite_stress']:.3f}")
+    print(f"  spread_21d_change:{row['spread_21d_change']:.3f}")
