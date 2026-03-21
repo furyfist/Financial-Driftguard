@@ -2,12 +2,14 @@ import json
 import pickle
 import pandas as pd
 from pathlib import Path
+import requests, json
 
 from driftguard import Monitor, DataSnapshot
 from driftguard.regime.macro_signals import MacroSnapshot
 from driftguard.regime.tagger import RegimeTagger
 from datetime import date
 
+BASE = "http://localhost:8000"
 DATA_DIR = Path(__file__).parent / "data"
 
 
@@ -82,6 +84,23 @@ def run_demo():
 
     return result
 
+def seed_api():
+    _, features, baseline_df, live_df = load_artifacts()
+
+    # Set baseline
+    requests.post(f"{BASE}/drift/lending_club_v1/run", json={
+        "records": baseline_df.fillna(0).to_dict("records"),
+        "set_as_baseline": True
+    })
+    print("Baseline set via API")
+
+    # Run drift check with live data
+    resp = requests.post(f"{BASE}/drift/lending_club_v1/run", json={
+        "records": live_df.fillna(0).to_dict("records"),
+        "set_as_baseline": False
+    })
+    print("Drift run:", resp.json())
 
 if __name__ == "__main__":
     run_demo()
+    seed_api()
