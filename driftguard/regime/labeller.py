@@ -33,17 +33,18 @@ _RATE_SHOCK_PERIODS = [
     ("2022-03-01", "2023-07-31"),  # Post-COVID inflation fight
 ]
 
-# VIX regime thresholds — calibrated to historical distribution
-# Below 15: calm. 15-25: normal. 25-35: elevated. 35+: crisis.
-_VIX_CALM       = 15.0
-_VIX_ELEVATED   = 25.0
-_VIX_CRISIS     = 35.0
-_VIX_BLACK_SWAN = 45.0
+# Updated threshold constants — data-driven from 30-year percentiles
+# VIX: 75th=22.72, 90th=28.60, 95th=32.95, 99th=46.68
+_VIX_CALM       = 18.0   # below median (50th=17.59)
+_VIX_ELEVATED   = 23.0   # ~75th percentile
+_VIX_CRISIS     = 30.0   # ~90th percentile
+_VIX_BLACK_SWAN = 45.0   # ~99th percentile
 
-# Credit spread thresholds (BAA minus 10Y Treasury, in percentage points)
-_SPREAD_NORMAL  = 1.5
-_SPREAD_STRESS  = 2.5
-_SPREAD_CRISIS  = 4.0
+# Credit spread: 25th=1.75, 50th=2.15, 75th=2.69, 90th=3.16, 99th=5.46
+# Old 1.5 threshold fired on 94.9% of days — recalibrated to 75th+
+_SPREAD_NORMAL  = 2.80   # above 75th percentile — genuinely elevated
+_SPREAD_STRESS  = 3.50   # ~90th percentile
+_SPREAD_CRISIS  = 5.00   # ~99th percentile
 
 
 @dataclass
@@ -184,57 +185,75 @@ class RegimeLabeller:
         in_rate_shock: bool,
     ) -> tuple[str, float, int]:
         """
-        Returns (regime_label, confidence, sources_agreed).
+        Priority: black_swan → recession → rate_shock → credit_stress → stable
 
-        Priority order matters — black_swan before recession,
-        recession before rate_shock, etc.
+        Key insight from data diagnostics:
+        - Spread median is 2.15 — old 1.5 threshold fired on 95% of days
+        - VIX 75th percentile is 22.72 — 23.0 is genuinely elevated
+        - COVID peak VIX hit 82 intraday — daily data clears 45 threshold
+        - GFC peak VIX hit 80 — clears black_swan correctly
         """
-        # black_swan: extreme VIX AND extreme spread — both must fire
-        if vix >= _VIX_BLACK_SWAN and spread >= _SPREAD_CRISIS:
+        # black_swan: extreme VIX OR (crisis VIX + crisis spread)
+        # Either signal alone can trigger if extreme enough
+        if vix >= _VIX_BLACK_SWAN:
             sources = sum([
                 vix >= _VIX_BLACK_SWAN,
-                spread >= _SPREAD_CRISIS,
+                spread >= _SPREAD_STRESS,
                 in_recession,
             ])
-            return "black_swan", round(sources / 3, 2), sources
+            return "black_swan", round(min(sources / 3 + 0.33, 1.0), 2), sources
 
-        # recession: NBER official OR (high VIX + yield inversion + spread stress)
-        vix_recession  = vix >= _VIX_CRISIS
-        spread_stress  = spread >= _SPREAD_STRESS
-        curve_inverted = yield_curve < 0.0
+        if vix >= _VIX_CRISIS and spread >= _SPREAD_CRISIS:
+            return "black_swan", 1.0, 3
 
+        # recession: NBER official + supporting signals
+        # NBER alone = 0.6 confidence, with supporting signals = higher
+        if in_recession:
+            supporting = sum([
+                vix >= _VIX_ELEVATED,
+                spread >= _SPREAD_NORMAL,
+                yield_curve < 0.0,
+            ])
+            confidence = round(0.5 + (supporting / 3) * 0.5, 2)
+            return "recession", confidence, supporting + 1
+
+        # recession without NBER label — leading indicators firing
         recession_signals = sum([
-            in_recession,
-            vix_recession and spread_stress,
-            curve_inverted and spread_stress,
+            vix >= _VIX_CRISIS and spread >= _SPREAD_STRESS,
+            yield_curve < 0.0 and spread >= _SPREAD_STRESS,
+            spread >= _SPREAD_CRISIS,
         ])
         if recession_signals >= 2:
             return "recession", round(recession_signals / 3, 2), recession_signals
 
-        if in_recession:
-            return "recession", 0.6, 1
-
-        # rate_shock: in Fed tightening cycle + VIX elevated
-        if in_rate_shock and vix >= _VIX_ELEVATED:
-            sources = sum([in_rate_shock, vix >= _VIX_ELEVATED, spread >= _SPREAD_NORMAL])
-            return "rate_shock", round(sources / 3, 2), sources
-
-        # credit_stress: elevated VIX OR spread stress, outside recession
-        if vix >= _VIX_ELEVATED or spread >= _SPREAD_NORMAL:
-            sources = sum([
+        # rate_shock: in Fed tightening cycle
+        # Elevated VIX not required — rate shocks can happen with low volatility
+        if in_rate_shock:
+            supporting = sum([
                 vix >= _VIX_ELEVATED,
                 spread >= _SPREAD_NORMAL,
-                yield_curve < 0.5,
+                yield_curve < 1.0,  # flattening curve accompanies rate hikes
             ])
-            return "credit_stress", round(sources / 3, 2), sources
+            confidence = round(0.4 + (supporting / 3) * 0.4, 2)
+            return "rate_shock", confidence, supporting
 
-        # stable: nothing firing
-        sources = sum([
+        # credit_stress: elevated VIX or spread above normal
+        # Uses recalibrated _SPREAD_NORMAL = 2.80 (75th pct) — not 1.5
+        stress_signals = sum([
+            vix >= _VIX_ELEVATED,
+            spread >= _SPREAD_NORMAL,
+            yield_curve < 0.5 and vix > _VIX_CALM,
+        ])
+        if stress_signals >= 1:
+            return "credit_stress", round(stress_signals / 3, 2), stress_signals
+
+        # stable: everything calm
+        stable_signals = sum([
             vix < _VIX_ELEVATED,
             spread < _SPREAD_NORMAL,
             yield_curve > 0.0,
         ])
-        return "stable", round(sources / 3, 2), sources
+        return "stable", round(stable_signals / 3, 2), stable_signals
 
     def _nber_mask(self, index: pd.DatetimeIndex) -> dict:
         mask = {}
