@@ -1,2 +1,9 @@
 venv/
 *.db
+*.env
+.env
+driftguard.db
+demo/data/
+__pycache__/
+*.pyc
+.pytest_cache/
