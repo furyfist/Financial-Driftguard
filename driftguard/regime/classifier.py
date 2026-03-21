@@ -164,24 +164,34 @@ class RegimeClassifier:
             raise RuntimeError("Model not trained — call train() or load() first")
 
         row = {
-            "vix":           macro_snapshot.vix           or 20.0,
-            "credit_spread": macro_snapshot.credit_spread or 2.5,
-            "yield_curve":   macro_snapshot.yield_curve   or 0.5,
-            "fed_funds":     macro_snapshot.fed_funds_rate or 2.0,
+            "vix":           macro_snapshot.vix              or 20.0,
+            "credit_spread": macro_snapshot.credit_spread    or 2.5,
+            "yield_curve":   macro_snapshot.yield_curve      or 0.5,
+            "fed_funds":     macro_snapshot.fed_funds_rate   or 2.0,
             "unemployment":  macro_snapshot.unemployment_rate or 4.5,
         }
 
-        # Build a minimal DataFrame with enough history for rolling features
-        # We repeat the snapshot 70 times to satisfy the 63-day warmup
-        df_input = pd.DataFrame([row] * 70)
-        df_input.index = pd.date_range(end=pd.Timestamp.today(), periods=len(df_input), freq="B")
+        # Repeat the snapshot enough times to satisfy the 63-day rolling warmup
+        # Use integer index — no business day calendar mismatch
+        n_rows = 100
+        df_input = pd.DataFrame([row] * n_rows)
+
+        # Assign a proper datetime index after construction
+        # Use consecutive calendar days — no weekend skipping issue
+        df_input.index = pd.date_range(
+            end=pd.Timestamp.today().normalize(),
+            periods=n_rows,
+            freq="D",       # calendar days, not business days
+        )
 
         features = build_features(df_input)
         if features.empty:
             logger.warning("Feature engineering produced empty output — using fallback")
             return Regime.UNKNOWN.value, 0.0, {}
 
+        # Align feature columns to training order
         X = features[self.feature_cols].iloc[[-1]]
+
         proba = self.model.predict_proba(X)[0]
 
         proba_dict = {
