@@ -4,6 +4,8 @@ from .core.drift_result import DriftResult, DriftSeverity, FeatureDriftResult
 from .detectors.psi import PSIDetector
 from .detectors.ks_test import KSDetector
 from .detectors.js_divergence import JSDivergenceDetector
+from .regime.tagger import RegimeTagger, Regime, RegimeAssessment
+from .regime.macro_signals import MacroSignalFetcher, MacroSnapshot
 
 __version__ = "0.1.0"
 
@@ -16,4 +18,9 @@ __all__ = [
     "PSIDetector",
     "KSDetector",
     "JSDivergenceDetector",
+    "RegimeTagger",
+    "Regime",
+    "RegimeAssessment",
+    "MacroSignalFetcher",
+    "MacroSnapshot",
 ]
