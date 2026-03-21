@@ -87,19 +87,31 @@ def run_demo():
 def seed_api():
     _, features, baseline_df, live_df = load_artifacts()
 
-    # Set baseline
-    requests.post(f"{BASE}/drift/lending_club_v1/run", json={
+    # Step 1 — register model first (idempotent — ignore 409 if already exists)
+    reg = requests.post(f"{BASE}/models/", json={
+        "model_id": "lending_club_v1",
+        "description": "Credit default model trained pre-COVID — LightGBM"
+    })
+    if reg.status_code == 201:
+        print("Model registered")
+    elif reg.status_code == 409:
+        print("Model already exists — skipping registration")
+    else:
+        print(f"Registration response: {reg.status_code} {reg.text}")
+
+    # Step 2 — set baseline
+    resp = requests.post(f"{BASE}/drift/lending_club_v1/run", json={
         "records": baseline_df.fillna(0).to_dict("records"),
         "set_as_baseline": True
     })
-    print("Baseline set via API")
+    print(f"Baseline set: {resp.status_code}")
 
-    # Run drift check with live data
+    # Step 3 — run drift check
     resp = requests.post(f"{BASE}/drift/lending_club_v1/run", json={
         "records": live_df.fillna(0).to_dict("records"),
         "set_as_baseline": False
     })
-    print("Drift run:", resp.json())
+    print(f"Drift run: {resp.json()}")
 
 if __name__ == "__main__":
     run_demo()

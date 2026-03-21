@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 from ..store.database import create_db
 from ..scheduler.jobs import start_scheduler, stop_scheduler, restore_baselines_from_db
