@@ -174,7 +174,7 @@ class RegimeClassifier:
         # Build a minimal DataFrame with enough history for rolling features
         # We repeat the snapshot 70 times to satisfy the 63-day warmup
         df_input = pd.DataFrame([row] * 70)
-        df_input.index = pd.date_range(end=pd.Timestamp.today(), periods=70, freq="B")
+        df_input.index = pd.date_range(end=pd.Timestamp.today(), periods=len(df_input), freq="B")
 
         features = build_features(df_input)
         if features.empty:
