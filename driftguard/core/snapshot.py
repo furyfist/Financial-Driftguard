@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
@@ -11,7 +11,7 @@ class DataSnapshot:
     Pass a DataFrame and it extracts numpy arrays per feature.
     """
     label: str                          # "baseline" or "2024-Q1"
-    captured_at: datetime = field(default_factory=datetime.utcnow)
+    captured_at: datetime =  field(default_factory=lambda: datetime.now(timezone.utc))
     _features: dict[str, np.ndarray] = field(default_factory=dict, repr=False)
 
     @classmethod
