@@ -14,6 +14,29 @@ from ...store.database import MacroCache as MacroCacheModel
 
 router = APIRouter(prefix="/drift", tags=["drift"])
 
+@router.get("/macro/latest")
+def get_latest_macro_snapshot(session: Session = Depends(get_session)):
+    """Returns the most recently cached macro snapshot and regime."""
+    latest = session.exec(
+        select(MacroCacheModel)
+        .order_by(MacroCacheModel.fetched_at.desc())
+        .limit(1)
+    ).first()
+
+    if not latest:
+        return {"status": "no macro data yet — check FRED_API_KEY in .env"}
+
+    return {
+        "fetched_at":        latest.fetched_at,
+        "vix":               latest.vix,
+        "credit_spread":     latest.credit_spread,
+        "fed_funds_rate":    latest.fed_funds_rate,
+        "yield_curve":       latest.yield_curve,
+        "unemployment_rate": latest.unemployment_rate,
+        "regime":            latest.regime,
+        "regime_confidence": latest.regime_confidence,
+    }
+    
 @router.get("/{model_id}/history", response_model=list[DriftRunOut])
 def get_drift_history(
     model_id: str,
@@ -102,25 +125,3 @@ def trigger_drift_check(
         ],
     }
 
-@router.get("/macro/latest")
-def get_latest_macro_snapshot(session: Session = Depends(get_session)):
-    """Returns the most recently cached macro snapshot and regime."""
-    latest = session.exec(
-        select(MacroCacheModel)
-        .order_by(MacroCacheModel.fetched_at.desc())
-        .limit(1)
-    ).first()
-
-    if not latest:
-        return {"status": "no macro data yet — check FRED_API_KEY in .env"}
-
-    return {
-        "fetched_at":        latest.fetched_at,
-        "vix":               latest.vix,
-        "credit_spread":     latest.credit_spread,
-        "fed_funds_rate":    latest.fed_funds_rate,
-        "yield_curve":       latest.yield_curve,
-        "unemployment_rate": latest.unemployment_rate,
-        "regime":            latest.regime,
-        "regime_confidence": latest.regime_confidence,
-    }
