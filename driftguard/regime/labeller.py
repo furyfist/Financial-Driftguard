@@ -285,3 +285,4 @@ class RegimeLabeller:
 
     def load(self, path: str = "demo/data/regime_labels.parquet") -> pd.DataFrame:
         return pd.read_parquet(path)
+        
