@@ -143,9 +143,11 @@ def run_drift_check(model_id: str, current: DataSnapshot):
 
 def restore_baselines_from_db():
     """
-    Called on server startup — logs which models have persisted baselines.
-    Baselines are loaded lazily in run_drift_check(), not held in memory.
+    Called on server startup.
+    Logs persisted baselines and triggers immediate macro fetch.
     """
+    from .macro_job import fetch_and_cache_macro
+
     with Session(engine) as session:
         records = session.exec(select(ModelRecord)).all()
         loaded  = 0
@@ -162,6 +164,9 @@ def restore_baselines_from_db():
         else:
             logger.info(f"{loaded} model baseline(s) ready")
 
+    # Fetch macro immediately so regime is available from first request
+    logger.info("Fetching initial macro snapshot...")
+    fetch_and_cache_macro()
 
 def start_scheduler(interval_minutes: int = 30):
     if scheduler.running:
@@ -169,6 +174,22 @@ def start_scheduler(interval_minutes: int = 30):
     scheduler.start()
     logger.info(f"Scheduler started — drift checks every {interval_minutes} min")
 
+def start_scheduler(interval_minutes: int = 30):
+    if scheduler.running:
+        return
+
+    # Macro fetch — every 6 hours
+    from .macro_job import fetch_and_cache_macro
+    scheduler.add_job(
+        fetch_and_cache_macro,
+        trigger="interval",
+        hours=6,
+        id="macro_fetch",
+        replace_existing=True,
+    )
+
+    scheduler.start()
+    logger.info(f"Scheduler started — drift checks every {interval_minutes} min, macro every 6h")
 
 def stop_scheduler():
     if scheduler.running:
