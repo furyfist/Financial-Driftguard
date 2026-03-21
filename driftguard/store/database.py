@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+import io
 
 
 class ModelRecord(SQLModel, table=True):
@@ -8,6 +9,9 @@ class ModelRecord(SQLModel, table=True):
     model_id: str = Field(index=True, unique=True)
     description: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    baseline_data: Optional[bytes] = Field(default=None)   # parquet blob
+    baseline_set_at: Optional[datetime] = Field(default=None)
+    baseline_row_count: Optional[int] = Field(default=None)
 
 
 class DriftRun(SQLModel, table=True):
@@ -17,8 +21,9 @@ class DriftRun(SQLModel, table=True):
     overall_severity: str
     drift_score: float
     regime: Optional[str] = None
+    regime_confidence: Optional[float] = None   # new in v2
     notes: str = ""
-    feature_results_json: str = "{}"  # serialised JSON blob
+    feature_results_json: str = "{}"
 
 
 class AlertRecord(SQLModel, table=True):
@@ -29,6 +34,19 @@ class AlertRecord(SQLModel, table=True):
     message: str
     acknowledged: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class MacroCache(SQLModel, table=True):
+    """Stores latest macro snapshot per fetch — used by scheduler."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    vix: Optional[float] = None
+    credit_spread: Optional[float] = None
+    fed_funds_rate: Optional[float] = None
+    yield_curve: Optional[float] = None
+    unemployment_rate: Optional[float] = None
+    regime: Optional[str] = None
+    regime_confidence: Optional[float] = None
 
 
 sqlite_url = "sqlite:///./driftguard.db"
@@ -42,3 +60,26 @@ def create_db():
 def get_session():
     with Session(engine) as session:
         yield session
+
+
+def snapshot_to_bytes(snapshot) -> bytes:
+    """Serialise a DataSnapshot to parquet bytes for storage."""
+    import pandas as pd
+    import numpy as np
+    rows = {
+        feat: snapshot.get(feat)
+        for feat in snapshot.feature_names()
+    }
+    df  = pd.DataFrame(rows)
+    buf = io.BytesIO()
+    df.to_parquet(buf, index=False)
+    return buf.getvalue()
+
+
+def bytes_to_snapshot(data: bytes, label: str = "baseline"):
+    """Deserialise parquet bytes back to a DataSnapshot."""
+    import pandas as pd
+    from ..core.snapshot import DataSnapshot
+    buf = io.BytesIO(data)
+    df  = pd.read_parquet(buf)
+    return DataSnapshot.from_dataframe(df, label=label)

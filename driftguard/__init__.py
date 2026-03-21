@@ -6,8 +6,11 @@ from .detectors.ks_test import KSDetector
 from .detectors.js_divergence import JSDivergenceDetector
 from .regime.tagger import RegimeTagger, Regime, RegimeAssessment
 from .regime.macro_signals import MacroSignalFetcher, MacroSnapshot
+from .regime.classifier import RegimeClassifier
+from .regime.labeller import RegimeLabeller
+from .regime.features import build_features
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Monitor",
@@ -23,4 +26,7 @@ __all__ = [
     "RegimeAssessment",
     "MacroSignalFetcher",
     "MacroSnapshot",
+    "RegimeClassifier",
+    "RegimeLabeller",
+    "build_features",
 ]
