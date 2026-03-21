@@ -39,3 +39,21 @@ export interface Alert {
   acknowledged: boolean
   created_at: string
 }
+
+export interface MacroSnapshot {
+  fetched_at: string
+  vix: number | null
+  credit_spread: number | null
+  fed_funds_rate: number | null
+  yield_curve: number | null
+  unemployment_rate: number | null
+  regime: Regime | null
+  regime_confidence: number | null
+}
+
+export interface WebhookConfig {
+  platform: "discord" | "slack"
+  webhook_url: string
+  model_id: string | null
+  severity_threshold: "low" | "medium" | "high" | "critical"
+}

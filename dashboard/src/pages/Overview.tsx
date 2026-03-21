@@ -3,6 +3,7 @@ import type { Model, Alert } from "../types"
 import { modelsApi, alertsApi } from "../api/client"
 import { ModelHealthCard } from "../components/ModelHealthCard"
 import { AlertFeed } from "../components/AlertFeed"
+import { MacroPanel } from "../components/MacroPanel"
 import { useNavigate } from "react-router-dom"
 
 export function Overview() {
@@ -29,7 +30,13 @@ export function Overview() {
           <span className="font-display font-semibold text-ink tracking-tight">DriftGuard</span>
           <span className="text-ink-faint font-mono text-xs">v0.1.0</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button
+            onClick={() => navigate("/settings")}
+            className="text-ink-faint hover:text-ink font-mono text-xs transition-colors"
+          >
+            settings
+          </button>
           {alerts.length > 0 && (
             <span className="bg-critical-soft text-critical font-mono text-xs px-2.5 py-1 rounded-full border border-critical/20">
               {alerts.length} unacknowledged
@@ -50,6 +57,10 @@ export function Overview() {
           <p className="text-ink-muted text-sm mt-1">
             Drift monitoring with financial regime awareness
           </p>
+        </div>
+
+        <div className="mb-6">
+          <MacroPanel />
         </div>
 
         {loading ? (
