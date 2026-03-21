@@ -27,7 +27,7 @@ class KSDetector(BaseDetector):
 
         return float(ks_stat), {
             "p_value": float(p_value),
-            "significant": p_value < 0.05,
+            "significant": bool(p_value < 0.05),
             "baseline_mean": float(np.mean(baseline)),
             "current_mean": float(np.mean(current)),
             "baseline_std": float(np.std(baseline)),

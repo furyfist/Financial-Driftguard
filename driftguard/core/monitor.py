@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import numpy as np
 
@@ -56,7 +56,7 @@ class Monitor:
 
         return DriftResult(
             model_id=self.model_id,
-            checked_at=datetime.utcnow(),
+            checked_at=datetime.now(timezone.utc),
             feature_results=feature_results,
             overall_severity=overall,
         )
