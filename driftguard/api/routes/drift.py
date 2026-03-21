@@ -12,7 +12,6 @@ from ...core.snapshot import DataSnapshot
 
 router = APIRouter(prefix="/drift", tags=["drift"])
 
-
 @router.get("/{model_id}/history", response_model=list[DriftRunOut])
 def get_drift_history(
     model_id: str,
