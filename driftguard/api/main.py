@@ -4,13 +4,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..store.database import create_db
+from ..scheduler.jobs import start_scheduler, stop_scheduler
 from .routes import models, drift, alerts
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_db()   # creates tables if they don't exist
+    create_db()
+    start_scheduler()
     yield
+    stop_scheduler()
 
 
 app = FastAPI(
@@ -22,7 +25,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
