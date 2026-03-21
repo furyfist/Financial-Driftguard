@@ -22,8 +22,7 @@ _ENCODER_PATH = Path("demo/data/regime_label_encoder.json")
 # Regime class order — consistent across train/predict
 _REGIME_CLASSES = [
     Regime.STABLE.value,
-    Regime.CREDIT_STRESS.value,
-    Regime.RATE_SHOCK.value,
+    Regime.CREDIT_STRESS.value,   # covers rate_shock too
     Regime.RECESSION.value,
     Regime.BLACK_SWAN.value,
 ]

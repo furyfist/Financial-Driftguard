@@ -98,6 +98,12 @@ class RegimeLabeller:
         logger.info(f"Raw data fetched — {len(raw)} trading days")
 
         labelled = self._label(raw)
+
+        # V2: merge rate_shock into credit_stress
+        # Both mean "macro-driven shift, monitor don't retrain"
+        # Keeping them separate hurts classifier recall with no operational benefit
+        labelled["regime"] = labelled["regime"].replace("rate_shock", "credit_stress")
+
         logger.info(
             f"Labelling complete\n"
             f"{labelled['regime'].value_counts().to_string()}"

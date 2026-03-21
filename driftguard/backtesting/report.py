@@ -11,7 +11,6 @@ from .runner import BacktestResult
 _REGIME_ORDER = [
     "stable",
     "credit_stress",
-    "rate_shock",
     "recession",
     "black_swan",
 ]
@@ -154,10 +153,11 @@ class BacktestReport:
         periods = {
             "GFC peak":        ("2008-09-01", "2009-03-31", "black_swan"),
             "Post-GFC calm":   ("2012-01-01", "2013-12-31", "stable"),
-            "Rate hike cycle": ("2017-01-01", "2018-12-31", "rate_shock"),
-            "COVID crash":     ("2020-02-01", "2020-05-31", "black_swan"),
+            "Rate hike cycle": ("2017-01-01", "2018-12-31", "credit_stress"),  # was rate_shock
+            "COVID crash":     ("2020-02-01", "2020-04-30", "black_swan"),
+            "COVID recovery":  ("2020-05-01", "2020-12-31", "credit_stress"),  # new
             "Post-COVID":      ("2021-01-01", "2021-12-31", "stable"),
-            "2022 hikes":      ("2022-03-01", "2023-06-30", "rate_shock"),
+            "2022 hikes":      ("2022-03-01", "2023-06-30", "credit_stress"),  # was rate_shock
         }
         df_timeline = self.df.copy()
         df_timeline["date"] = pd.to_datetime(df_timeline["date"])
