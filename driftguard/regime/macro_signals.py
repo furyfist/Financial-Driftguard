@@ -28,9 +28,13 @@ class MacroSnapshot:
     unemployment_rate: Optional[float] = None
 
     def is_complete(self) -> bool:
+        # unemployment excluded — monthly FRED series lags 4-6 weeks
+        # classifier works well without it (6th most important feature)
         return all(v is not None for v in [
-            self.vix, self.credit_spread, self.fed_funds_rate,
-            self.yield_curve, self.unemployment_rate
+            self.vix,
+            self.credit_spread,
+            self.fed_funds_rate,
+            self.yield_curve,
         ])
 
 
