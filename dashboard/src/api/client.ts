@@ -1,6 +1,6 @@
 import axios from "axios"
 import type { Model, DriftRun, FeatureResult, Alert } from "../types"
-import type { MacroSnapshot, WebhookConfig } from "../types"
+import type { MacroSnapshot, WebhookConfig, DriftForecast } from "../types"
 
 const api = axios.create({ baseURL: "http://localhost:8000" })
 
@@ -33,4 +33,9 @@ export const macroApi = {
 export const webhookApi = {
   configure: (config: WebhookConfig) =>
     api.post("/alerts/webhooks/configure", config).then(r => r.data),
+}
+
+export const forecastApi = {
+  get: (modelId: string) =>
+    api.get<DriftForecast>(`/drift/forecast/${modelId}`).then(r => r.data),
 }

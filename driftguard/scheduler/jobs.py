@@ -183,6 +183,30 @@ def start_scheduler(interval_minutes: int = 30):
     scheduler.start()
     logger.info(f"Scheduler started — drift checks every {interval_minutes} min")
 
+def _run_daily_forecast() -> None:
+    """Compute and log daily proactive drift forecast. Best-effort — never raises."""
+    try:
+        from finsight.forecast import DriftForecaster
+        forecast = DriftForecaster().forecast_from_db()
+        if forecast.probability >= 0.50:
+            logger.warning(
+                "Drift forecast: %d%% probability in %dd — %s — signals: %s",
+                int(forecast.probability * 100),
+                forecast.horizon_days,
+                forecast.expected_regime,
+                ", ".join(forecast.trigger_signals) or "none",
+            )
+        else:
+            logger.info(
+                "Drift forecast: %d%% probability — signals stable",
+                int(forecast.probability * 100),
+            )
+    except ImportError:
+        pass  # finsight not installed — skip silently
+    except Exception as exc:
+        logger.warning("Daily forecast job failed: %s", exc)
+
+
 def start_scheduler(interval_minutes: int = 30):
     if scheduler.running:
         return
@@ -197,8 +221,17 @@ def start_scheduler(interval_minutes: int = 30):
         replace_existing=True,
     )
 
+    # Daily proactive drift forecast
+    scheduler.add_job(
+        _run_daily_forecast,
+        trigger="interval",
+        hours=24,
+        id="daily_forecast",
+        replace_existing=True,
+    )
+
     scheduler.start()
-    logger.info(f"Scheduler started — drift checks every {interval_minutes} min, macro every 6h")
+    logger.info(f"Scheduler started — macro every 6h, forecast every 24h")
 
 def register_notifier(
     notifier: BaseNotifier,

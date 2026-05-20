@@ -20,7 +20,7 @@ def _drift_span(name: str):
     return _tracer.start_as_current_span(name)
 
 from ...store.database import DriftRun, AlertRecord, ModelRecord, get_session
-from ..schemas import DriftRunOut
+from ..schemas import DriftRunOut, DriftForecastOut
 from ...scheduler.jobs import run_drift_check, register_baseline
 from ...core.snapshot import DataSnapshot
 from ...store.database import MacroCache as MacroCacheModel
@@ -51,6 +51,38 @@ def get_latest_macro_snapshot(session: Session = Depends(get_session)):
         "regime_confidence": latest.regime_confidence,
     }
     
+@router.get("/forecast/{model_id}", response_model=DriftForecastOut)
+def get_drift_forecast(
+    model_id: str,
+    session: Session = Depends(get_session),
+):
+    """
+    Proactive drift forecast for a model based on recent macro signal history.
+    Returns probability 0–1 that elevated drift will occur in the next 7–14 days.
+    """
+    model = session.exec(
+        select(ModelRecord).where(ModelRecord.model_id == model_id)
+    ).first()
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
+
+    try:
+        from finsight.forecast import DriftForecaster
+        forecast = DriftForecaster().forecast_from_db()
+        return DriftForecastOut(
+            probability=forecast.probability,
+            expected_regime=forecast.expected_regime,
+            trigger_signals=forecast.trigger_signals,
+            horizon_days=forecast.horizon_days,
+            explanation=forecast.explanation,
+        )
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="FinSight not installed — run: pip install -e '.[llm,tracing,agent]'",
+        )
+
+
 @router.get("/{model_id}/history", response_model=list[DriftRunOut])
 def get_drift_history(
     model_id: str,

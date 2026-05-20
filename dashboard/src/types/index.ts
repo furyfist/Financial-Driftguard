@@ -57,3 +57,11 @@ export interface WebhookConfig {
   model_id: string | null
   severity_threshold: "low" | "medium" | "high" | "critical"
 }
+
+export interface DriftForecast {
+  probability: number
+  expected_regime: Regime
+  trigger_signals: string[]
+  horizon_days: number
+  explanation: string
+}

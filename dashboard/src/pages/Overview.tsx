@@ -4,6 +4,7 @@ import { modelsApi, alertsApi } from "../api/client"
 import { ModelHealthCard } from "../components/ModelHealthCard"
 import { AlertFeed } from "../components/AlertFeed"
 import { MacroPanel } from "../components/MacroPanel"
+import { ForecastAlert } from "../components/ForecastAlert"
 import { useNavigate } from "react-router-dom"
 
 export function Overview() {
@@ -62,6 +63,11 @@ export function Overview() {
         <div className="mb-6">
           <MacroPanel />
         </div>
+
+        {/* Proactive forecast banner — shown only when probability ≥ 50% */}
+        {models.length > 0 && (
+          <ForecastAlert modelId={models[0].model_id} />
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

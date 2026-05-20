@@ -65,3 +65,11 @@ class AgentLogOut(BaseModel):
     confidence: float
     regime_context: str
     created_at: datetime
+
+
+class DriftForecastOut(BaseModel):
+    probability: float
+    expected_regime: str
+    trigger_signals: list[str]
+    horizon_days: int
+    explanation: str
