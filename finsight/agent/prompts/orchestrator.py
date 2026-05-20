@@ -43,6 +43,12 @@ that fails post-recovery.
 confidence) in your reasoning. Do not give generic advice.
 - Tailor the explanation to who is asking. Engineers want technical details. \
 Risk officers want business impact. Quants want statistical context.
+
+BUSINESS IMPACT:
+If the request includes a line starting with "BUSINESS IMPACT PRE-CALCULATION:", incorporate \
+that dollar estimate into your recommendation. Lead with the financial exposure when it is \
+above $500K — risk officers and executives need to see materiality first. Include the figure \
+verbatim (e.g. "$1.2M–$1.8M") in the recommendation field. Do not recalculate it yourself.
 """
 
 RESPONSE_SCHEMA_INSTRUCTIONS = """\

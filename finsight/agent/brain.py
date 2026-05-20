@@ -60,18 +60,20 @@ class DriftGuardAgent:
         Calls tools in sequence per the orchestrator prompt's reasoning process,
         then returns a structured recommendation.
         """
+        impact_hint = _get_impact_hint(model_id)
+        content = (
+            f"Perform a complete drift governance analysis for model '{model_id}'. "
+            "Follow the reasoning process: call get_current_macro first to establish "
+            "the regime, then get_latest_drift for the severity and score, then "
+            "get_feature_breakdown if severity is medium or above. "
+            "Return your structured JSON recommendation."
+        )
+        if impact_hint:
+            content += f"\n\nBUSINESS IMPACT PRE-CALCULATION: {impact_hint}"
+
         messages = [
             {"role": "system", "content": _system_prompt()},
-            {
-                "role": "user",
-                "content": (
-                    f"Perform a complete drift governance analysis for model '{model_id}'. "
-                    "Follow the reasoning process: call get_current_macro first to establish "
-                    "the regime, then get_latest_drift for the severity and score, then "
-                    "get_feature_breakdown if severity is medium or above. "
-                    "Return your structured JSON recommendation."
-                ),
-            },
+            {"role": "user", "content": content},
         ]
         response = self._run_tool_loop(messages)
         result = _parse_response(response.content)
@@ -194,6 +196,31 @@ def _dispatch_tool_call(name: str, arguments: dict) -> object:
         return call_macro_tool(name, arguments)
     logger.warning("Unknown tool called: %r", name)
     return {"error": f"Unknown tool: {name!r}"}
+
+
+def _get_impact_hint(model_id: str) -> str:
+    """
+    Pre-compute a business impact estimate from the latest drift run + current macro.
+    Returns a one-line summary string to inject into the analyze() prompt, or "" on failure.
+    Failures are silently swallowed — impact hint is best-effort.
+    """
+    try:
+        from finsight.impact import estimate_impact
+        from finsight.agent.tools.drift_tools import get_latest_drift
+        from finsight.agent.tools.macro_tools import get_current_macro
+
+        drift = get_latest_drift(model_id)
+        macro = get_current_macro()
+
+        psi    = drift.get("drift_score") if drift else None
+        regime = (macro.get("regime") if macro else None) or "unknown"
+
+        if psi is None:
+            return ""
+
+        return estimate_impact(psi_score=float(psi), regime=str(regime)).summary
+    except Exception:
+        return ""
 
 
 def _parse_response(content: str) -> AgentResponse:
