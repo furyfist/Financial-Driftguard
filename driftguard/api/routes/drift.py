@@ -1,9 +1,23 @@
 import json
+from contextlib import nullcontext
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Any
 from sqlmodel import Session, select, desc
+
+try:
+    from opentelemetry import trace as _otel_trace
+    _tracer = _otel_trace.get_tracer("finsight.api")
+except ImportError:
+    _tracer = None
+
+
+def _drift_span(name: str):
+    """Return an OTel span context manager; falls back to nullcontext if OTel is not installed."""
+    if _tracer is None:
+        return nullcontext()
+    return _tracer.start_as_current_span(name)
 
 from ...store.database import DriftRun, AlertRecord, ModelRecord, get_session
 from ..schemas import DriftRunOut
@@ -106,12 +120,19 @@ def trigger_drift_check(
         register_baseline(model_id, snapshot)
         return {"message": f"Baseline set for '{model_id}'", "rows": len(df)}
 
-    result = run_drift_check(model_id, snapshot)
-    if result is None:
-        raise HTTPException(
-            status_code=400,
-            detail="No baseline registered. POST with set_as_baseline=true first."
-        )
+    with _drift_span("api.drift_run") as span:
+        if span is not None:
+            span.set_attribute("model.id", model_id)
+        result = run_drift_check(model_id, snapshot)
+        if result is None:
+            raise HTTPException(
+                status_code=400,
+                detail="No baseline registered. POST with set_as_baseline=true first."
+            )
+        if span is not None:
+            span.set_attribute("drift.severity", result.overall_severity.value)
+            if result.regime:
+                span.set_attribute("regime.class", result.regime)
 
     return {
         "model_id": model_id,

@@ -12,6 +12,12 @@ from ..scheduler.jobs import start_scheduler, stop_scheduler, restore_baselines_
 async def lifespan(app: FastAPI):
     create_db()
     restore_baselines_from_db()
+    try:
+        import os
+        from finsight.tracing import init_tracing
+        init_tracing(project_name=os.getenv("PHOENIX_PROJECT_NAME", "finsight-ai"))
+    except ImportError:
+        pass  # finsight not installed — running as plain DriftGuard
     start_scheduler()
     yield
     stop_scheduler()

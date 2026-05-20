@@ -1,0 +1,20 @@
+services:
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"   # web UI + OTLP HTTP endpoint (/v1/traces)
+      - "4317:4317"   # OTLP gRPC endpoint
+    environment:
+      PHOENIX_WORKING_DIR: /phoenix
+    volumes:
+      - phoenix_data:/phoenix
+
+  # Uncomment in Step 3 (Arize MCP Bridge)
+  # phoenix-mcp:
+  #   image: node:20-alpine
+  #   command: npx -y @arizeai/phoenix-mcp@latest --baseUrl http://phoenix:6006
+  #   depends_on:
+  #     - phoenix
+
+volumes:
+  phoenix_data:
