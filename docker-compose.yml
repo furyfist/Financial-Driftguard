@@ -9,12 +9,12 @@ services:
     volumes:
       - phoenix_data:/phoenix
 
-  # Uncomment in Step 3 (Arize MCP Bridge)
-  # phoenix-mcp:
-  #   image: node:20-alpine
-  #   command: npx -y @arizeai/phoenix-mcp@latest --baseUrl http://phoenix:6006
-  #   depends_on:
-  #     - phoenix
+  # Phoenix MCP server — lets Claude Desktop and other MCP clients query Phoenix directly
+  phoenix-mcp:
+    image: node:20-alpine
+    command: npx -y @arizeai/phoenix-mcp@latest --baseUrl http://phoenix:6006
+    depends_on:
+      - phoenix
 
 volumes:
   phoenix_data:
