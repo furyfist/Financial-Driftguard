@@ -49,6 +49,19 @@ class MacroCache(SQLModel, table=True):
     regime_confidence: Optional[float] = None
 
 
+class AgentDecisionLog(SQLModel, table=True):
+    """Audit log — every agent recommendation persisted for governance traceability."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    model_id: Optional[str] = Field(default=None, index=True)
+    query: str
+    recommendation: str
+    action: str = Field(index=True)   # monitor | investigate | retrain | freeze | ...
+    confidence: float
+    regime_context: str = ""          # regime at time of decision
+    trace_ids_referenced: str = "[]"  # JSON array of Phoenix trace IDs cited
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 sqlite_url = "sqlite:///./driftguard.db"
 engine = create_engine(sqlite_url, echo=False)
 

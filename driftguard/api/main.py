@@ -43,6 +43,14 @@ app.include_router(models.router)
 app.include_router(drift.router)
 app.include_router(alerts.router)
 
+try:
+    from .routes import agent as _agent_routes
+    app.include_router(_agent_routes.router)
+except ImportError:
+    logging.getLogger(__name__).warning(
+        "finsight not installed — /agent routes disabled"
+    )
+
 
 @app.get("/health")
 def health():

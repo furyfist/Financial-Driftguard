@@ -35,3 +35,33 @@ class AlertOut(BaseModel):
 
 class AckRequest(BaseModel):
     alert_id: int
+
+
+# ── Agent schemas ─────────────────────────────────────────────────────────────
+
+class AgentAskRequest(BaseModel):
+    query: str
+    model_id: Optional[str] = None
+
+
+class AgentAnalyzeRequest(BaseModel):
+    model_id: str
+
+
+class AgentResponseOut(BaseModel):
+    recommendation: str
+    action: str
+    confidence: float
+    reasoning: str
+    sources: list[str] = []
+    model_id: Optional[str] = None
+
+
+class AgentLogOut(BaseModel):
+    id: int
+    model_id: Optional[str]
+    query: str
+    action: str
+    confidence: float
+    regime_context: str
+    created_at: datetime
