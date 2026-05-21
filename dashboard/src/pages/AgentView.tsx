@@ -301,22 +301,38 @@ export function AgentView() {
             {messages.map((msg, i) =>
               msg.role === "user"
                 ? <UserBubble key={i} msg={msg} />
-                : <AgentBubble key={i} msg={msg} />
+                : (
+                  <div key={i} className="flex justify-start">
+                    <div className="max-w-[80%] space-y-1">
+                      <div className="flex items-center gap-2 pl-1">
+                        <span className="font-mono text-xs text-ink-faint">FinSight AI</span>
+                      </div>
+                      <AgentResponseCard
+                        regime={msg.regime}
+                        action={msg.action}
+                        confidence={msg.confidence ?? 0}
+                        recommendation={msg.text}
+                        sources={msg.sources}
+                      />
+                      <p className="font-mono text-xs text-ink-faint pl-1">
+                        {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                )
             )}
 
             {/* Thinking indicator */}
             {thinking && (
               <div className="flex justify-start">
-                <div className="bg-surface border border-border rounded-2xl rounded-tl-sm px-4 py-3">
-                  <div className="flex gap-1 items-center h-4">
-                    {[0, 1, 2].map(i => (
-                      <span
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-ink-faint animate-bounce"
-                        style={{ animationDelay: `${i * 150}ms` }}
-                      />
-                    ))}
+                <div className="max-w-[80%] space-y-1">
+                  <div className="flex items-center gap-2 pl-1">
+                    <span className="font-mono text-xs text-ink-faint">FinSight AI</span>
                   </div>
+                  <AgentResponseCard
+                    recommendation=""
+                    loading={true}
+                  />
                 </div>
               </div>
             )}
