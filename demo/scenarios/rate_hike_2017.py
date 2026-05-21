@@ -34,13 +34,15 @@ API_BASE = "http://localhost:8000"
 MODEL_ID  = "lending_club_v1"
 DATA_DIR  = ROOT / "demo" / "data"
 
-# 2017–2018 Fed hiking cycle macro conditions
+# Q4 2018 peak-of-cycle macro conditions — the moment hike stress became visible.
+# Fed Funds hit 2.27%, yield curve nearly flat at 0.21, VIX spiked to 25+.
+# Labeller: in_rate_shock=True + VIX>=23 + yield_curve<0.5 → rate_shock (credit_stress).
 RATE_HIKE_MACRO = {
-    "vix":               17.2,    # low vol, complacency
-    "credit_spread":     1.62,    # spreads widening slightly
-    "fed_funds_rate":    1.50,    # mid-hike-cycle
-    "yield_curve":       0.52,    # still positive, not inverted yet
-    "unemployment_rate": 4.1,     # historically low — strong labour market
+    "vix":               25.0,    # elevated — Q4 2018 VIX spike (peaked at 36 in Dec)
+    "credit_spread":     1.90,    # widening into year-end — credit markets tightening
+    "fed_funds_rate":    2.27,    # end-of-cycle peak rate
+    "yield_curve":       0.21,    # nearly flat — market pricing in policy error
+    "unemployment_rate": 3.7,     # historically low — strong labour market
 }
 
 SEPARATOR = "─" * 60
@@ -133,15 +135,16 @@ def print_the_key_insight() -> None:
 
 
 def print_macro_context() -> None:
-    banner("MACRO CONTEXT — 2017-2018 FED HIKING CYCLE")
-    print("  Fed Funds Rate : 0.91% (Jan 2017) → 2.27% (Dec 2018)")
-    print("  # of Hikes     : 7 hikes over 24 months")
-    print("  VIX            : 17.2 (low vol — market not panicking)")
-    print("  Credit Spread  : 1.62% (tightening, not stress)")
-    print("  Unemployment   : 4.1% (historically low)")
+    banner("MACRO CONTEXT — Q4 2018 PEAK RATE HIKE STRESS")
+    print("  Fed Funds Rate : 2.27% (peak — 7 hikes over 24 months)")
+    print("  VIX            : 25.0 (elevated — spiked to 36 in Dec 2018)")
+    print("  Credit Spread  : 1.90% (widening — year-end credit stress)")
+    print("  Yield Curve    : 0.21% (nearly flat — pricing in policy error)")
+    print("  Unemployment   : 3.7% (historically low — strong labour market)")
     print()
-    print("  Interpretation: Orderly tightening. Not a crisis.")
-    print("  Model drift is EXPECTED. It will self-resolve.")
+    print("  Interpretation: Rate hike stress regime. Not a crisis or recession.")
+    print("  Yield curve nearly flat + VIX elevated = market doubting the Fed.")
+    print("  Model drift is EXPECTED. It will self-resolve post-cycle.")
 
 
 def main() -> None:
