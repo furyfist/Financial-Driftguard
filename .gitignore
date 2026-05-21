@@ -7,3 +7,4 @@ demo/data/
 __pycache__/
 *.pyc
 .pytest_cache/
+finsight/reports/output/

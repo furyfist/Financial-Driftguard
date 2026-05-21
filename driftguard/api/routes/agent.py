@@ -1,9 +1,11 @@
-"""Agent routes — POST /agent/ask, POST /agent/analyze, GET /agent/log."""
+"""Agent routes — POST /agent/ask, POST /agent/analyze, POST /agent/report, GET /agent/log."""
 
 import json
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlmodel import Session, select, desc
 
 from ...store.database import AgentDecisionLog, ModelRecord, get_session
@@ -12,6 +14,8 @@ from ..schemas import (
     AgentAnalyzeRequest,
     AgentResponseOut,
     AgentLogOut,
+    ReportRequest,
+    ReportOut,
 )
 
 router = APIRouter(prefix="/agent", tags=["agent"])
@@ -75,6 +79,46 @@ def ask(
     )
 
 
+@router.post("/report", response_class=FileResponse)
+def generate_report(
+    request: ReportRequest,
+    session: Session = Depends(get_session),
+):
+    """
+    Generate an SR 11-7 compliant PDF report for a model over a date range.
+    Returns the PDF as a file download.
+    date_range format: "YYYY-MM-DD/YYYY-MM-DD" (empty string → last 30 days).
+    """
+    model = session.exec(
+        select(ModelRecord).where(ModelRecord.model_id == request.model_id)
+    ).first()
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model '{request.model_id}' not found")
+
+    date_range = request.date_range or _default_date_range()
+
+    try:
+        from finsight.reports import ReportGenerator
+        gen = ReportGenerator()
+        report = gen.build(model_id=request.model_id, date_range=date_range)
+        pdf_path = gen.to_pdf(report)
+    except ImportError as exc:
+        logger.error("finsight.reports not available: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Report generation requires: pip install reportlab>=4.0.0",
+        )
+    except Exception as exc:
+        logger.error("Report generation failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Report generation failed: {exc}")
+
+    return FileResponse(
+        path=str(pdf_path),
+        media_type="application/pdf",
+        filename=pdf_path.name,
+    )
+
+
 @router.get("/log", response_model=list[AgentLogOut])
 def get_agent_log(
     limit: int = 20,
@@ -112,6 +156,13 @@ def _run_agent(fn):
             status_code=503,
             detail=f"Agent unavailable: {exc}",
         )
+
+
+def _default_date_range() -> str:
+    from datetime import timedelta
+    end   = datetime.now(timezone.utc)
+    start = end - timedelta(days=30)
+    return f"{start.strftime('%Y-%m-%d')}/{end.strftime('%Y-%m-%d')}"
 
 
 def _persist(session: Session, result, query: str) -> None:

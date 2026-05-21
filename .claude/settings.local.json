@@ -4,7 +4,9 @@
       "Bash(python -m pytest tests/test_agent.py -v)",
       "Bash(python -m pytest tests/test_forecast.py -v)",
       "Bash(python -m pytest tests/test_challenger.py -v)",
-      "Bash(python -m pytest tests/test_challenger.py tests/test_forecast.py tests/test_impact.py -v --tb=no -q)"
+      "Bash(python -m pytest tests/test_challenger.py tests/test_forecast.py tests/test_impact.py -v --tb=no -q)",
+      "Bash(python -m pytest tests/test_report.py -v)",
+      "Bash(python -m pytest tests/test_detectors.py -q)"
     ]
   }
 }

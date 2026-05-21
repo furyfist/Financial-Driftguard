@@ -75,6 +75,19 @@ class DriftForecastOut(BaseModel):
     explanation: str
 
 
+class ReportRequest(BaseModel):
+    model_id: str
+    date_range: str = ""   # "YYYY-MM-DD/YYYY-MM-DD"; empty → last 30 days
+
+
+class ReportOut(BaseModel):
+    model_id: str
+    date_range: str
+    generated_at: datetime
+    filename: str
+    download_path: str
+
+
 class ChallengerResultOut(BaseModel):
     model_id: str
     status: str
