@@ -53,13 +53,14 @@ const ACTION_LABELS: Record<Action, string> = {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 interface ActionCardProps {
-  action:         Action
-  confidence:     number          // 0–1
-  regime:         Regime | null
-  recommendation: string          // plain-language text from the agent
-  topFeatures?:   string[]        // worst-drifting feature names
-  reasoning?:     string          // agent's internal reasoning (collapsible)
-  onAcknowledge?: () => void      // optional one-click acknowledge callback
+  action:               Action
+  confidence:           number          // 0–1
+  regime:               Regime | null
+  recommendation:       string          // plain-language text from the agent
+  topFeatures?:         string[]        // worst-drifting feature names
+  featureExplanations?: Record<string, string>  // feature → LLM explanation text
+  reasoning?:           string          // agent's internal reasoning (collapsible)
+  onAcknowledge?:       () => void      // optional one-click acknowledge callback
 }
 
 export function ActionCard({
@@ -68,6 +69,7 @@ export function ActionCard({
   regime,
   recommendation,
   topFeatures = [],
+  featureExplanations,
   reasoning,
   onAcknowledge,
 }: ActionCardProps) {
@@ -117,6 +119,26 @@ export function ActionCard({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Why did these features drift? (expandable explanations) */}
+      {featureExplanations && topFeatures.length > 0 && (
+        <details className="text-xs text-ink-muted">
+          <summary className="cursor-pointer font-mono hover:text-ink select-none">
+            Why did these features drift?
+          </summary>
+          <div className="mt-2 space-y-2 pl-2 border-l border-border-subtle">
+            {topFeatures
+              .filter(f => featureExplanations[f])
+              .map(f => (
+                <div key={f}>
+                  <span className="font-mono font-bold text-ink">{f}</span>
+                  {" — "}
+                  <span className="text-ink-muted">{featureExplanations[f]}</span>
+                </div>
+              ))}
+          </div>
+        </details>
       )}
 
       {/* Reasoning (collapsible via details) */}
