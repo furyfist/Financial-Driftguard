@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
+from .auth import APIKeyMiddleware
+
 from ..store.database import create_db
 from ..scheduler.jobs import start_scheduler, stop_scheduler, restore_baselines_from_db
 
@@ -37,11 +39,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(APIKeyMiddleware)
 
-from .routes import models, drift, alerts
+from .routes import models, drift, alerts, demo
 app.include_router(models.router)
 app.include_router(drift.router)
 app.include_router(alerts.router)
+app.include_router(demo.router)
 
 try:
     from .routes import agent as _agent_routes

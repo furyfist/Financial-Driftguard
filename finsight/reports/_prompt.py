@@ -31,8 +31,8 @@ SECTION REQUIREMENTS:
    referencing the regime context and drift severity together. \
    State whether the drift is consistent with macro-driven or model-decay-driven causes.
 7. audit_trail -- Confirm that all drift runs, agent decisions, and referenced \
-   Phoenix trace IDs are documented below. State the total count of drift checks \
-   performed in the period.
+   Phoenix trace IDs are documented below. Use the total_drift_runs field from \
+   the input data to state the exact total count of drift checks performed in the period.
 
 OUTPUT FORMAT:
 Respond ONLY with a JSON object. Keys must exactly match the section names above. \

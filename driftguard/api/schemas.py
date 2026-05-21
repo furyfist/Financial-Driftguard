@@ -22,6 +22,7 @@ class DriftRunOut(BaseModel):
     drift_score: float
     regime: Optional[str]
     notes: str
+    phoenix_trace_id: Optional[str] = None
 
 
 class AlertOut(BaseModel):
