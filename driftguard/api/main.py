@@ -59,6 +59,14 @@ except ImportError:
         "finsight not installed — /experiments routes disabled"
     )
 
+try:
+    from .routes import trust as _trust_routes
+    app.include_router(_trust_routes.router)
+except ImportError:
+    logging.getLogger(__name__).warning(
+        "finsight not installed — /trust routes disabled"
+    )
+
 
 @app.get("/health")
 def health():

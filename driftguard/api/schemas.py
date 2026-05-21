@@ -75,6 +75,18 @@ class DriftForecastOut(BaseModel):
     explanation: str
 
 
+class TrustScoreOut(BaseModel):
+    model_id: str
+    trustworthy: bool
+    confidence: float
+    regime: str
+    drift_severity: str
+    recommendation: str   # proceed | proceed_with_caution | escalate | halt
+    reason: str
+    last_checked: datetime
+    next_check_recommended: datetime
+
+
 class ReportRequest(BaseModel):
     model_id: str
     date_range: str = ""   # "YYYY-MM-DD/YYYY-MM-DD"; empty → last 30 days

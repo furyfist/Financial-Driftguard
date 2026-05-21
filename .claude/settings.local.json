@@ -6,7 +6,9 @@
       "Bash(python -m pytest tests/test_challenger.py -v)",
       "Bash(python -m pytest tests/test_challenger.py tests/test_forecast.py tests/test_impact.py -v --tb=no -q)",
       "Bash(python -m pytest tests/test_report.py -v)",
-      "Bash(python -m pytest tests/test_detectors.py -q)"
+      "Bash(python -m pytest tests/test_detectors.py -q)",
+      "PowerShell(& \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\financial-driftguard\\\\venv\\\\Scripts\\\\python.exe\" -m pytest \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\financial-driftguard\\\\tests\\\\test_trust_api.py\" -v 2>&1)",
+      "PowerShell(& \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\financial-driftguard\\\\venv\\\\Scripts\\\\python.exe\" -m pytest \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\financial-driftguard\\\\tests\\\\test_detectors.py\" \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\financial-driftguard\\\\tests\\\\test_report.py\" -q 2>&1)"
     ]
   }
 }

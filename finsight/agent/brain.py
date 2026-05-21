@@ -11,6 +11,7 @@ from finsight.agent.tools.phoenix_tools import PHOENIX_TOOLS, call_phoenix_tool
 from finsight.agent.tools.drift_tools import DRIFT_TOOLS, call_drift_tool
 from finsight.agent.tools.macro_tools import MACRO_TOOLS, call_macro_tool
 from finsight.agent.tools.experiment_tools import EXPERIMENT_TOOLS, call_experiment_tool
+from finsight.agent.tools.trust_tools import TRUST_TOOLS, call_trust_tool
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +19,13 @@ logger = logging.getLogger(__name__)
 _TEMPERATURE = 0.2
 MAX_TOOL_ITERATIONS = 8
 
-ALL_TOOLS = PHOENIX_TOOLS + DRIFT_TOOLS + MACRO_TOOLS + EXPERIMENT_TOOLS
+ALL_TOOLS = PHOENIX_TOOLS + DRIFT_TOOLS + MACRO_TOOLS + EXPERIMENT_TOOLS + TRUST_TOOLS
 
 _PHOENIX_NAMES    = {t["function"]["name"] for t in PHOENIX_TOOLS}
 _DRIFT_NAMES      = {t["function"]["name"] for t in DRIFT_TOOLS}
 _MACRO_NAMES      = {t["function"]["name"] for t in MACRO_TOOLS}
 _EXPERIMENT_NAMES = {t["function"]["name"] for t in EXPERIMENT_TOOLS}
+_TRUST_NAMES      = {t["function"]["name"] for t in TRUST_TOOLS}
 
 VALID_ACTIONS = frozenset({
     "monitor", "investigate", "retrain", "freeze", "champion_challenger", "escalate",
@@ -198,6 +200,8 @@ def _dispatch_tool_call(name: str, arguments: dict) -> object:
         return call_macro_tool(name, arguments)
     if name in _EXPERIMENT_NAMES:
         return call_experiment_tool(name, arguments)
+    if name in _TRUST_NAMES:
+        return call_trust_tool(name, arguments)
     logger.warning("Unknown tool called: %r", name)
     return {"error": f"Unknown tool: {name!r}"}
 
