@@ -3,6 +3,7 @@ import { Overview }        from "./pages/Overview"
 import { ModelDetail }     from "./pages/ModelDetail"
 import { Settings }        from "./pages/Settings"
 import { ExperimentView }  from "./pages/ExperimentView"
+import { AgentView }       from "./pages/AgentView"
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
         <Route path="/models/:modelId" element={<ModelDetail />} />
         <Route path="/settings"        element={<Settings />} />
         <Route path="/experiments"     element={<ExperimentView />} />
+        <Route path="/agent"           element={<AgentView />} />
       </Routes>
     </BrowserRouter>
   )
