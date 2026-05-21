@@ -65,3 +65,25 @@ export interface DriftForecast {
   horizon_days: number
   explanation: string
 }
+
+export type ChallengerWinner =
+  | "challenger_better"
+  | "champion_better"
+  | "inconclusive"
+  | "no_baseline"
+
+export interface ChallengerResult {
+  model_id: string
+  status: string
+  champion_run_id: number | null
+  challenger_run_id: number | null
+  champion_drift_score: number | null
+  challenger_drift_score: number | null
+  champion_severity: Severity | null
+  challenger_severity: Severity | null
+  winner: ChallengerWinner
+  drift_score_delta: number | null
+  drifted_features: string[]
+  recommendation: string
+  triggered_at: string
+}

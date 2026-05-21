@@ -51,6 +51,14 @@ except ImportError:
         "finsight not installed — /agent routes disabled"
     )
 
+try:
+    from .routes import experiments as _experiment_routes
+    app.include_router(_experiment_routes.router)
+except ImportError:
+    logging.getLogger(__name__).warning(
+        "finsight not installed — /experiments routes disabled"
+    )
+
 
 @app.get("/health")
 def health():

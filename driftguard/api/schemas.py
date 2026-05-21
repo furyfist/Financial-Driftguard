@@ -73,3 +73,19 @@ class DriftForecastOut(BaseModel):
     trigger_signals: list[str]
     horizon_days: int
     explanation: str
+
+
+class ChallengerResultOut(BaseModel):
+    model_id: str
+    status: str
+    champion_run_id: Optional[int] = None
+    challenger_run_id: Optional[int] = None
+    champion_drift_score: Optional[float] = None
+    challenger_drift_score: Optional[float] = None
+    champion_severity: Optional[str] = None
+    challenger_severity: Optional[str] = None
+    winner: str = "inconclusive"
+    drift_score_delta: Optional[float] = None
+    drifted_features: list[str] = []
+    recommendation: str = ""
+    triggered_at: datetime

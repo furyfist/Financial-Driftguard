@@ -1,6 +1,6 @@
 import axios from "axios"
 import type { Model, DriftRun, FeatureResult, Alert } from "../types"
-import type { MacroSnapshot, WebhookConfig, DriftForecast } from "../types"
+import type { MacroSnapshot, WebhookConfig, DriftForecast, ChallengerResult } from "../types"
 
 const api = axios.create({ baseURL: "http://localhost:8000" })
 
@@ -38,4 +38,11 @@ export const webhookApi = {
 export const forecastApi = {
   get: (modelId: string) =>
     api.get<DriftForecast>(`/drift/forecast/${modelId}`).then(r => r.data),
+}
+
+export const experimentsApi = {
+  trigger: (modelId: string) =>
+    api.post<ChallengerResult>(`/experiments/${modelId}/challenger`).then(r => r.data),
+  results: (modelId: string) =>
+    api.get<ChallengerResult>(`/experiments/${modelId}/results`).then(r => r.data),
 }
