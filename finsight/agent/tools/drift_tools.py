@@ -7,6 +7,7 @@ from typing import Any
 from sqlmodel import Session, select, desc
 
 from driftguard.store.database import DriftRun, ModelRecord, engine
+from finsight.agent.tools.macro_tools import get_current_macro
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,84 @@ def get_feature_breakdown(model_id: str, run_id: int) -> list[dict]:
         return []
 
 
+def explain_feature_drift(
+    feature_name: str,
+    model_id: str,
+    run_id: int | None = None,
+) -> dict:
+    """
+    Generate a 2–3 sentence LLM explanation of why a feature drifted,
+    grounded in macro context and the feature's domain role.
+    """
+    try:
+        from finsight.impact.feature_metadata import get_feature_description
+        from finsight.llm import get_llm
+
+        description = get_feature_description(feature_name)
+
+        drift = (
+            get_latest_drift(model_id)
+            if run_id is None
+            else (get_feature_breakdown(model_id, run_id) and get_latest_drift(model_id))
+        )
+        drift = drift or {}
+
+        macro   = get_current_macro() or {}
+        regime  = drift.get("regime") or macro.get("regime") or "unknown"
+        notes   = drift.get("notes") or ""
+
+        drift_score    = drift.get("drift_score", 0.0)
+        vix            = macro.get("vix", "N/A")
+        credit_spread  = macro.get("credit_spread", "N/A")
+        fed_funds_rate = macro.get("fed_funds_rate", "N/A")
+        yield_curve    = macro.get("yield_curve", "N/A")
+
+        system_msg = (
+            "You are a financial ML model risk analyst. "
+            f"Explain in 2–3 sentences why {feature_name} drifted, "
+            "using the provided macro context and feature domain role. "
+            "Be specific about the macro mechanism."
+        )
+        user_msg = (
+            f"Feature: {feature_name}\n"
+            f"Role: {description}\n"
+            f"Regime: {regime}\n"
+            f"VIX: {vix}, credit_spread: {credit_spread}, "
+            f"fed_funds_rate: {fed_funds_rate}, yield_curve: {yield_curve}\n"
+            f"Drift score (PSI): {drift_score}\n"
+            f"Notes from last run: {notes}"
+        )
+
+        llm = get_llm(role="fast")
+        response = llm.complete(
+            [
+                {"role": "system", "content": system_msg},
+                {"role": "user",   "content": user_msg},
+            ],
+            temperature=0.3,
+        )
+
+        return {
+            "feature":        feature_name,
+            "explanation":    response.content.strip(),
+            "regime":         regime,
+            "macro_snapshot": {
+                "vix":            vix,
+                "credit_spread":  credit_spread,
+                "fed_funds_rate": fed_funds_rate,
+                "yield_curve":    yield_curve,
+            },
+        }
+
+    except Exception as exc:
+        logger.warning("explain_feature_drift failed for %s: %s", feature_name, exc)
+        return {
+            "feature":     feature_name,
+            "explanation": "Explanation unavailable.",
+            "error":       str(exc),
+        }
+
+
 # ── OpenAI-compatible tool schema ─────────────────────────────────────────────
 
 DRIFT_TOOLS: list[dict] = [
@@ -182,16 +261,46 @@ DRIFT_TOOLS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "explain_feature_drift",
+            "description": (
+                "Generate a concise, macro-grounded explanation of why a specific feature "
+                "drifted. Returns a 2–3 sentence domain-aware explanation that references "
+                "the current regime and macro indicators."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "feature_name": {
+                        "type": "string",
+                        "description": "The name of the feature to explain (e.g. 'int_rate').",
+                    },
+                    "model_id": {
+                        "type": "string",
+                        "description": "The model ID to pull drift context from.",
+                    },
+                    "run_id": {
+                        "type": "integer",
+                        "description": "Optional specific run ID; omit to use the latest run.",
+                    },
+                },
+                "required": ["feature_name", "model_id"],
+            },
+        },
+    },
 ]
 
 
 # ── Agent-facing dispatch ──────────────────────────────────────────────────────
 
 _DISPATCH: dict[str, Any] = {
-    "list_models": list_models,
-    "get_latest_drift": get_latest_drift,
-    "get_model_history": get_model_history,
+    "list_models":           list_models,
+    "get_latest_drift":      get_latest_drift,
+    "get_model_history":     get_model_history,
     "get_feature_breakdown": get_feature_breakdown,
+    "explain_feature_drift": explain_feature_drift,
 }
 
 
