@@ -82,6 +82,7 @@ class DriftGuardAgent:
         response = self._run_tool_loop(messages)
         result = _parse_response(response.content)
         result.model_id = model_id
+        _maybe_notify(result, model_id)
         return result
 
     def ask(
@@ -112,6 +113,7 @@ class DriftGuardAgent:
         response = self._run_tool_loop(messages)
         result = _parse_response(response.content)
         result.model_id = model_id
+        _maybe_notify(result, model_id)
 
         if memory is not None:
             memory.add_assistant(response.content)
@@ -204,6 +206,35 @@ def _dispatch_tool_call(name: str, arguments: dict) -> object:
         return call_trust_tool(name, arguments)
     logger.warning("Unknown tool called: %r", name)
     return {"error": f"Unknown tool: {name!r}"}
+
+
+_NOTIFY_ACTIONS = frozenset({"halt", "freeze", "escalate", "retrain", "investigate"})
+
+
+def _maybe_notify(result: AgentResponse, model_id: str | None) -> None:
+    """
+    Fire enriched notifications for high/critical agent decisions.
+    Best-effort — never raises.
+    """
+    if not result or result.action not in _NOTIFY_ACTIONS:
+        return
+    effective_model_id = model_id or result.model_id or ""
+    try:
+        try:
+            from finsight.notifications.enricher import build_enriched_payload
+        except ImportError:
+            return
+        try:
+            from driftguard.scheduler.jobs import _get_notifiers_for_model
+        except ImportError:
+            return
+
+        payload   = build_enriched_payload(result, effective_model_id)
+        notifiers = _get_notifiers_for_model(effective_model_id)
+        for notifier in notifiers:
+            notifier.notify(payload)
+    except Exception as exc:
+        logger.warning("_maybe_notify failed: %s", exc)
 
 
 def _get_impact_hint(model_id: str) -> str:

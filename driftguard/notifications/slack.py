@@ -26,6 +26,19 @@ class SlackNotifier(BaseNotifier):
             for f in payload.top_features[:3]
         ]) or "No features drifted"
 
+        # Estimated impact — best-effort; omitted if finsight not installed.
+        impact_text: str | None = None
+        try:
+            from finsight.impact.estimator import estimate_impact
+            est = estimate_impact(payload.drift_score, payload.regime)
+            if est.low_usd >= 1.0:
+                impact_text = (
+                    f"${est.low_usd / 1e6:.1f}M–${est.high_usd / 1e6:.1f}M "
+                    f"(FNR +{est.fnr_increase_pct:.0f}%)"
+                )
+        except ImportError:
+            pass
+
         blocks = [
             {
                 "type": "header",
@@ -67,19 +80,21 @@ class SlackNotifier(BaseNotifier):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Recommendation*\n{payload.recommendation[:300]}",
+                    "text": f"*Agent recommendation*\n{payload.recommendation[:300]}",
                 },
             },
-            {
+        ]
+
+        if impact_text:
+            blocks.append({
                 "type": "context",
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": "DriftGuard v0.2.0 — Financial ML Drift Monitoring",
+                        "text": f"*Estimated impact:* {impact_text}",
                     }
                 ],
-            },
-        ]
+            })
 
         body = json.dumps({"blocks": blocks}).encode("utf-8")
         req  = urllib.request.Request(
