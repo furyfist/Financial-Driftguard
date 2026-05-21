@@ -186,6 +186,7 @@ def _collect_data(model_id: str, start: datetime, end: datetime) -> dict:
                     "regime": r.regime,
                     "regime_confidence": r.regime_confidence,
                     "feature_results": _safe_json(r.feature_results_json),
+                    "phoenix_trace_id": r.phoenix_trace_id,
                 }
                 for r in drift_runs
             ],
@@ -252,9 +253,11 @@ def _generate_sections(raw: dict, llm) -> dict[str, SR117Section]:
     llm_raw = {
         **raw,
         # 5 most-recent runs, feature_results stripped down to top-3 names
-        "drift_runs":      [_slim_run(r) for r in raw["drift_runs"][-5:]],
-        "macro_snapshots": raw["macro_snapshots"][:3],
-        "agent_decisions": raw["agent_decisions"],
+        "drift_runs":       [_slim_run(r) for r in raw["drift_runs"][-5:]],
+        "macro_snapshots":  raw["macro_snapshots"][:3],
+        "agent_decisions":  raw["agent_decisions"],
+        # Pass total so the LLM cites the real count, not the capped slice
+        "total_drift_runs": len(raw["drift_runs"]),
     }
     context = json.dumps(llm_raw, indent=2, default=str)
     messages = [
@@ -287,7 +290,10 @@ def _parse_section_response(content: str, raw: dict) -> dict[str, SR117Section]:
     model_id = raw["model"]["model_id"]
     runs = raw["drift_runs"]
     decisions = raw["agent_decisions"]
-    all_trace_ids = [tid for d in decisions for tid in (d.get("trace_ids") or [])]
+    agent_trace_ids = [tid for d in decisions for tid in (d.get("trace_ids") or [])]
+    run_trace_ids = [r["phoenix_trace_id"] for r in runs if r.get("phoenix_trace_id")]
+    # Merge and deduplicate, preserving order
+    all_trace_ids = list(dict.fromkeys(agent_trace_ids + run_trace_ids))
 
     def _section(key: str, title: str, data_fn) -> SR117Section:
         return SR117Section(

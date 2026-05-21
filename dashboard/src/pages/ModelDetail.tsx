@@ -7,7 +7,8 @@ import { RegimeBadge } from "../components/RegimeBadge"
 import { SeverityBar } from "../components/SeverityBar"
 import { ActionCard } from "../components/ActionCard"
 import { ImpactBanner } from "../components/ImpactBanner"
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
+import { DriftChart } from "../components/DriftChart"
+import { HaltOverlay } from "../components/HaltOverlay"
 
 export function ModelDetail() {
   const { modelId } = useParams<{ modelId: string }>()
@@ -36,14 +37,12 @@ export function ModelDetail() {
   }, [modelId])
 
   const latest = history[0]
-  const chartData = [...history].reverse().map(r => ({
-    date: new Date(r.checked_at).toLocaleDateString(),
-    score: r.drift_score,
-    severity: r.overall_severity,
-  }))
 
   return (
     <div className="min-h-screen bg-canvas">
+      {latest && (
+        <HaltOverlay runId={latest.id} regime={latest.regime} />
+      )}
       <header className="bg-surface border-b border-border px-8 py-4 flex items-center gap-4 sticky top-0 z-10">
         <button
           onClick={() => navigate("/")}
@@ -109,23 +108,7 @@ export function ModelDetail() {
             {/* Drift history chart */}
             <div className="bg-surface border border-border rounded-lg p-5">
               <h2 className="font-display font-medium text-sm text-ink mb-4">Drift score history</h2>
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={chartData}>
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fontFamily: "DM Mono" }} />
-                  <YAxis tick={{ fontSize: 10, fontFamily: "DM Mono" }} domain={[0, "auto"]} />
-                  <Tooltip
-                    contentStyle={{ fontFamily: "DM Mono", fontSize: 11, border: "1px solid #E8E6E0" }}
-                  />
-                  <ReferenceLine y={0.25} stroke="#D4450C" strokeDasharray="3 3" strokeWidth={1} />
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    stroke="#D4450C"
-                    strokeWidth={1.5}
-                    dot={{ r: 3, fill: "#D4450C" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <DriftChart history={history} />
             </div>
 
             {/* Feature drift table */}

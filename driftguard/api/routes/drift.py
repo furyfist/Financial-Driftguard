@@ -19,6 +19,18 @@ def _drift_span(name: str):
         return nullcontext()
     return _tracer.start_as_current_span(name)
 
+
+def _current_trace_id() -> str | None:
+    """Extract the active OTel trace ID as a 32-char hex string, or None."""
+    try:
+        from opentelemetry import trace as _otel
+        ctx = _otel.get_current_span().get_span_context()
+        if ctx.is_valid:
+            return format(ctx.trace_id, "032x")
+    except Exception:
+        pass
+    return None
+
 from ...store.database import DriftRun, AlertRecord, ModelRecord, get_session
 from ..schemas import DriftRunOut, DriftForecastOut
 from ...scheduler.jobs import run_drift_check, register_baseline
@@ -187,6 +199,20 @@ def trigger_drift_check(
             span.set_attribute("drift.severity", result.overall_severity.value)
             if result.regime:
                 span.set_attribute("regime.class", result.regime)
+        # Capture the active span's trace ID and store it on the DriftRun that was
+        # just written by run_drift_check (most recent row for this model).
+        trace_id = _current_trace_id()
+        if trace_id:
+            latest_run = session.exec(
+                select(DriftRun)
+                .where(DriftRun.model_id == model_id)
+                .order_by(desc(DriftRun.checked_at))
+                .limit(1)
+            ).first()
+            if latest_run:
+                latest_run.phoenix_trace_id = trace_id
+                session.add(latest_run)
+                session.commit()
 
     return {
         "model_id": model_id,

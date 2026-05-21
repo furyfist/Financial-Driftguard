@@ -24,6 +24,7 @@ class DriftRun(SQLModel, table=True):
     regime_confidence: Optional[float] = None   # new in v2
     notes: str = ""
     feature_results_json: str = "{}"
+    phoenix_trace_id: Optional[str] = None      # new in v4
 
 
 class AlertRecord(SQLModel, table=True):
