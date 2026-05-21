@@ -54,11 +54,13 @@ class ReportGenerator:
         """Render the SR117Report to a PDF file and return its path."""
         try:
             from reportlab.lib import colors
+            from reportlab.lib.enums import TA_CENTER
             from reportlab.lib.pagesizes import letter
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.lib.units import inch
             from reportlab.platypus import (
-                SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+                SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+                HRFlowable, PageBreak,
             )
         except ImportError as exc:
             raise RuntimeError(
@@ -70,6 +72,7 @@ class ReportGenerator:
         ts = report.generated_at.strftime("%Y%m%d_%H%M%S")
         out_path = _OUTPUT_DIR / f"{report.model_id}_{ts}.pdf"
 
+        page_w, page_h = letter
         doc = SimpleDocTemplate(
             str(out_path),
             pagesize=letter,
@@ -80,15 +83,118 @@ class ReportGenerator:
         )
 
         styles = getSampleStyleSheet()
+
+        # ── Cover page styles ───────────────────────────────────────────────────
+        style_cover_title = ParagraphStyle(
+            "CoverTitle", parent=styles["Title"],
+            fontSize=36, fontName="Helvetica-Bold",
+            alignment=TA_CENTER, spaceAfter=8,
+        )
+        style_cover_sub = ParagraphStyle(
+            "CoverSub", parent=styles["Normal"],
+            fontSize=14, textColor=colors.grey,
+            alignment=TA_CENTER, spaceAfter=24,
+        )
+        style_cover_meta = ParagraphStyle(
+            "CoverMeta", parent=styles["Normal"],
+            fontSize=11, alignment=TA_CENTER, spaceAfter=6,
+        )
+        style_cover_summary = ParagraphStyle(
+            "CoverSummary", parent=styles["Normal"],
+            fontSize=10, textColor=colors.grey,
+            alignment=TA_CENTER, spaceAfter=6,
+        )
+        style_regime_label = ParagraphStyle(
+            "RegimeLabel", parent=styles["Normal"],
+            fontSize=12, fontName="Helvetica-Bold",
+            alignment=TA_CENTER,
+        )
+
+        # ── Report section styles ───────────────────────────────────────────────
         style_title  = ParagraphStyle("ReportTitle",  parent=styles["Title"],  fontSize=18, spaceAfter=6)
         style_meta   = ParagraphStyle("ReportMeta",   parent=styles["Normal"], fontSize=9,  textColor=colors.grey, spaceAfter=16)
         style_h1     = ParagraphStyle("SectionHead",  parent=styles["Heading1"], fontSize=12, spaceBefore=18, spaceAfter=6, textColor=colors.HexColor("#1a3a5c"))
         style_body   = ParagraphStyle("SectionBody",  parent=styles["Normal"], fontSize=10, leading=15, spaceAfter=8)
         style_bullet = ParagraphStyle("Bullet",       parent=styles["Normal"], fontSize=9,  leftIndent=12, spaceAfter=3, textColor=colors.HexColor("#444444"))
 
+        # ── Parse regime from data_points ───────────────────────────────────────
+        regime_str = "unknown"
+        for point in report.audit_trail.data_points:
+            if "regime=" in point:
+                regime_str = point.split("regime=")[-1].split(",")[0].strip()
+        # Secondary fallback: regime_context section (that's where regime= lives)
+        if regime_str == "unknown":
+            for point in report.regime_context.data_points:
+                if "regime=" in point:
+                    regime_str = point.split("regime=")[-1].split(",")[0].strip()
+
+        _regime_colors = {
+            "stable":        "#1A6B3C",
+            "credit_stress": "#B45309",
+            "rate_shock":    "#B45309",
+            "recession":     "#C0200F",
+            "black_swan":    "#C0200F",
+        }
+        regime_bg = _regime_colors.get(regime_str, "#888888")
+        regime_label = regime_str.replace("_", " ").upper()
+
+        # Executive summary — first sentence of audit_trail prose
+        exec_summary = ""
+        prose = (report.audit_trail.prose or "").strip()
+        if prose:
+            first = prose.split(".")[0].strip()
+            exec_summary = first + "." if first else ""
+
+        # ── Watermark callback (canvas layer, drawn before story content) ───────
+        def _draw_watermark(canvas, doc):  # noqa: ARG001
+            canvas.saveState()
+            canvas.setFont("Helvetica", 48)
+            canvas.setFillColor(colors.Color(0.5, 0.5, 0.5, alpha=0.1))
+            canvas.translate(page_w / 2, page_h / 2)
+            canvas.rotate(45)
+            canvas.drawCentredString(0, 0, "CONFIDENTIAL")
+            canvas.restoreState()
+
         story: list[Any] = []
 
-        # Cover header
+        # ── Cover page ──────────────────────────────────────────────────────────
+        story.append(Spacer(1, 1.5 * inch))
+        story.append(Paragraph("FinSight AI", style_cover_title))
+        story.append(Paragraph("MODEL GOVERNANCE REPORT", style_cover_sub))
+
+        # Regime status box centred on the page
+        regime_cell = Paragraph(
+            f'<font color="white"><b>{regime_label}</b></font>',
+            style_regime_label,
+        )
+        inner_table = Table([[regime_cell]], colWidths=[2.5 * inch])
+        inner_table.setStyle(TableStyle([
+            ("BACKGROUND",   (0, 0), (-1, -1), colors.HexColor(regime_bg)),
+            ("ALIGN",        (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING",   (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING",(0, 0), (-1, -1), 10),
+        ]))
+        usable_w = page_w - 2 * inch
+        outer_table = Table([[inner_table]], colWidths=[usable_w])
+        outer_table.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+        story.append(outer_table)
+        story.append(Spacer(1, 0.3 * inch))
+
+        story.append(Paragraph(f"<b>Model:</b> {report.model_id}", style_cover_meta))
+        story.append(Paragraph(f"<b>Reporting Period:</b> {report.date_range}", style_cover_meta))
+        story.append(Paragraph(
+            f"<b>Generated:</b> {report.generated_at.strftime('%Y-%m-%d %H:%M UTC')}",
+            style_cover_meta,
+        ))
+
+        if exec_summary:
+            story.append(Spacer(1, 0.2 * inch))
+            story.append(Paragraph(exec_summary, style_cover_summary))
+
+        story.append(PageBreak())
+
+        # ── Report header ───────────────────────────────────────────────────────
         story.append(Paragraph("FinSight AI — Model Governance Report", style_title))
         story.append(Paragraph(
             f"Model: <b>{report.model_id}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
@@ -116,7 +222,7 @@ class ReportGenerator:
                     story.append(Paragraph(f"• {point}", style_bullet))
             story.append(Spacer(1, 0.1 * inch))
 
-        doc.build(story)
+        doc.build(story, onFirstPage=_draw_watermark)
         logger.info("Report PDF written to %s", out_path)
         return out_path
 
