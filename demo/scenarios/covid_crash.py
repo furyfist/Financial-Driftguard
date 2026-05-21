@@ -36,7 +36,9 @@ MODEL_ID  = "lending_club_v1"
 DATA_DIR  = ROOT / "demo" / "data"
 
 # March 2020 macro conditions
+from datetime import date as _date
 COVID_MACRO = MacroSnapshot(
+    as_of=_date(2020, 3, 23),
     vix=57.1,
     credit_spread=3.82,
     fed_funds_rate=0.25,        # Fed slashed to zero

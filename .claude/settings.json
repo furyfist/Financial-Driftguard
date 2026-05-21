@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(curl http://localhost:8000/health 2>&1)",
+      "Bash(curl -s http://localhost:8000/health)"
+    ]
+  }
+}
