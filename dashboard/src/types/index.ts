@@ -66,6 +66,48 @@ export interface DriftForecast {
   explanation: string
 }
 
+export type Action =
+  | "monitor"
+  | "investigate"
+  | "retrain"
+  | "freeze"
+  | "champion_challenger"
+  | "escalate"
+  | "proceed"
+  | "proceed_with_caution"
+  | "halt"
+
+export interface AgentResponse {
+  recommendation: string
+  action: Action
+  confidence: number
+  reasoning: string
+  sources: string[]
+  model_id: string | null
+}
+
+export interface AgentLogEntry {
+  id: number
+  model_id: string | null
+  query: string
+  action: Action
+  confidence: number
+  regime_context: string
+  created_at: string
+}
+
+export interface TrustScore {
+  model_id: string
+  trustworthy: boolean
+  confidence: number
+  regime: Regime
+  drift_severity: Severity
+  recommendation: string
+  reason: string
+  last_checked: string
+  next_check_recommended: string
+}
+
 export type ChallengerWinner =
   | "challenger_better"
   | "champion_better"

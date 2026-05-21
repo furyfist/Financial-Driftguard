@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import type { DriftRun, FeatureResult } from "../types"
+import type { DriftRun, FeatureResult, AgentLogEntry } from "../types"
 import { driftApi } from "../api/client"
+import { agentApi } from "../api/agent-client"
 import { RegimeBadge } from "../components/RegimeBadge"
 import { SeverityBar } from "../components/SeverityBar"
+import { ActionCard } from "../components/ActionCard"
+import { ImpactBanner } from "../components/ImpactBanner"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
 
 export function ModelDetail() {
   const { modelId } = useParams<{ modelId: string }>()
   const navigate = useNavigate()
-  const [history, setHistory]   = useState<DriftRun[]>([])
-  const [features, setFeatures] = useState<FeatureResult[]>([])
-  const [loading, setLoading]   = useState(true)
+  const [history, setHistory]     = useState<DriftRun[]>([])
+  const [features, setFeatures]   = useState<FeatureResult[]>([])
+  const [agentLog, setAgentLog]   = useState<AgentLogEntry | null>(null)
+  const [loading, setLoading]     = useState(true)
 
   useEffect(() => {
     if (!modelId) return
@@ -19,12 +23,16 @@ export function ModelDetail() {
       setHistory(h)
       if (h.length > 0) {
         driftApi.features(modelId, h[0].id).then(f => {
-          // only PSI results, one per feature
           const psi = f.filter((r: FeatureResult) => r.detector === "psi")
           setFeatures(psi)
         })
       }
     }).finally(() => setLoading(false))
+
+    // Fetch latest agent decision (best-effort — never blocks the page)
+    agentApi.log(modelId, 1).then(entries => {
+      if (entries.length > 0) setAgentLog(entries[0])
+    }).catch(() => {})
   }, [modelId])
 
   const latest = history[0]
@@ -57,12 +65,31 @@ export function ModelDetail() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Agent action card — shown when a prior governance decision exists */}
+            {agentLog && (
+              <ActionCard
+                action={agentLog.action}
+                confidence={agentLog.confidence}
+                regime={agentLog.regime_context as any || latest.regime}
+                recommendation=""
+                topFeatures={features.slice(0, 3).map(f => f.feature_name)}
+              />
+            )}
+
+            {/* Business impact banner — shown when drift is material */}
+            {latest.drift_score > 0.10 && (
+              <ImpactBanner
+                psiScore={latest.drift_score}
+                regime={latest.regime}
+              />
+            )}
+
             {/* Summary row */}
             <div className="grid grid-cols-3 gap-4">
               {[
-                { label: "Drift score", value: latest.drift_score.toFixed(4), mono: true },
-                { label: "Severity",    value: latest.overall_severity.toUpperCase(), mono: true },
-                { label: "Regime",      value: latest.regime ?? "unknown", mono: true },
+                { label: "Drift score", value: latest.drift_score.toFixed(4) },
+                { label: "Severity",    value: latest.overall_severity.toUpperCase() },
+                { label: "Regime",      value: latest.regime ?? "unknown" },
               ].map(s => (
                 <div key={s.label} className="bg-surface border border-border rounded-lg p-4">
                   <p className="text-ink-faint text-xs mb-1">{s.label}</p>
@@ -71,7 +98,7 @@ export function ModelDetail() {
               ))}
             </div>
 
-            {/* Recommendation */}
+            {/* Recommendation from drift run notes */}
             {latest.notes && (
               <div className="bg-accent-soft border border-accent/20 rounded-lg px-5 py-4">
                 <p className="text-xs font-mono text-accent font-medium mb-1">Recommendation</p>
