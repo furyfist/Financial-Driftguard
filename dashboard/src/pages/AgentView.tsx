@@ -4,6 +4,7 @@ import type { Action, Regime, Model } from "../types"
 import { modelsApi } from "../api/client"
 import { agentApi, reportApi } from "../api/agent-client"
 import { RegimeBadge } from "../components/RegimeBadge"
+import { AgentResponseCard } from "../components/AgentResponseCard"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -14,6 +15,7 @@ interface AgentMessage {
   regime?:     Regime | null
   confidence?: number
   reasoning?:  string
+  sources?:    string[]
   timestamp:   Date
 }
 
@@ -113,13 +115,13 @@ function AgentBubble({ msg }: { msg: AgentMessage }) {
   )
 }
 
-// ── Starter prompts ────────────────────────────────────────────────────────────
+// ── Suggestion chips ────────────────────────────────────────────────────────────
 
-const STARTER_PROMPTS = [
-  "Is my model safe to use today?",
-  "What's driving the current drift?",
-  "Should I retrain given the macro environment?",
-  "Summarise the model's risk for the last 30 days.",
+const SUGGESTION_CHIPS = [
+  "Is my lending model safe right now?",
+  "What happened in March 2020?",
+  "Should I retrain?",
+  "Why did int_rate drift?",
 ]
 
 // ── Main page ──────────────────────────────────────────────────────────────────
@@ -168,9 +170,10 @@ export function AgentView() {
         role:       "agent",
         text:       resp.recommendation,
         action:     resp.action,
-        regime:     null,   // regime comes through in recommendation text; agent log has it
+        regime:     null,
         confidence: resp.confidence,
         reasoning:  resp.reasoning,
+        sources:    resp.sources,
         timestamp:  new Date(),
       }
       setMessages(prev => [...prev, agentMsg])
@@ -276,16 +279,16 @@ export function AgentView() {
               </p>
             </div>
 
-            {/* Starter prompts */}
+            {/* Suggestion chips */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
-              {STARTER_PROMPTS.map(prompt => (
+              {SUGGESTION_CHIPS.map(chip => (
                 <button
-                  key={prompt}
-                  onClick={() => send(prompt)}
+                  key={chip}
+                  onClick={() => send(chip)}
                   disabled={thinking}
                   className="text-left px-4 py-3 bg-surface border border-border rounded-xl text-sm text-ink-muted hover:text-ink hover:border-accent/30 transition-colors font-body leading-snug"
                 >
-                  {prompt}
+                  {chip}
                 </button>
               ))}
             </div>

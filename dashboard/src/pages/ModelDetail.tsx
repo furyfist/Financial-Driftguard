@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import type { DriftRun, FeatureResult, AgentLogEntry } from "../types"
 import { driftApi } from "../api/client"
 import { agentApi } from "../api/agent-client"
@@ -9,14 +9,23 @@ import { ActionCard } from "../components/ActionCard"
 import { ImpactBanner } from "../components/ImpactBanner"
 import { DriftChart } from "../components/DriftChart"
 import { HaltOverlay } from "../components/HaltOverlay"
+import { DemoPanel } from "../components/DemoPanel"
 
 export function ModelDetail() {
   const { modelId } = useParams<{ modelId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const demoMode = searchParams.get("demo") === "true"
+
   const [history, setHistory]     = useState<DriftRun[]>([])
   const [features, setFeatures]   = useState<FeatureResult[]>([])
   const [agentLog, setAgentLog]   = useState<AgentLogEntry | null>(null)
   const [loading, setLoading]     = useState(true)
+
+  const refreshHistory = () => {
+    if (!modelId) return
+    driftApi.history(modelId).then(h => setHistory(h)).catch(() => {})
+  }
 
   useEffect(() => {
     if (!modelId) return
@@ -64,6 +73,11 @@ export function ModelDetail() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Demo control panel — shown only when ?demo=true */}
+            {demoMode && modelId && (
+              <DemoPanel modelId={modelId} onRefresh={refreshHistory} />
+            )}
+
             {/* Agent action card — shown when a prior governance decision exists */}
             {agentLog && (
               <ActionCard
