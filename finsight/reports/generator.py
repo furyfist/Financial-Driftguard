@@ -351,16 +351,30 @@ def _fallback_sections(raw: dict) -> dict[str, SR117Section]:
 # ── Utilities ──────────────────────────────────────────────────────────────────
 
 def _parse_date_range(date_range: str) -> tuple[datetime, datetime]:
-    """Parse 'YYYY-MM-DD/YYYY-MM-DD' into (start, end) UTC datetimes."""
+    """Parse 'YYYY-MM-DD/YYYY-MM-DD' into (start, end) UTC datetimes.
+
+    Date-only strings (no time component) are treated as start-of-day for
+    the start bound and end-of-day for the end bound, so that all runs
+    timestamped during the final calendar day are included.
+    """
+    from datetime import timedelta
+
+    def _parse_one(s: str) -> datetime:
+        dt = datetime.fromisoformat(s.strip())
+        return dt.replace(tzinfo=timezone.utc)
+
     try:
         parts = date_range.split("/")
-        start = datetime.fromisoformat(parts[0].strip()).replace(tzinfo=timezone.utc)
-        end   = datetime.fromisoformat(parts[1].strip()).replace(tzinfo=timezone.utc)
+        start = _parse_one(parts[0])
+        end   = _parse_one(parts[1])
+        # Date-only end (time == midnight) → extend to end-of-day so today's
+        # runs aren't excluded by a < 00:00:00 cutoff.
+        if end.hour == 0 and end.minute == 0 and end.second == 0:
+            end = end + timedelta(days=1) - timedelta(microseconds=1)
         return start, end
     except Exception:
-        # Default: last 365 days — covers seeded demo runs stored months ago
+        # Fallback: last 365 days — covers seeded runs stored months ago
         now = datetime.now(timezone.utc)
-        from datetime import timedelta
         return now - timedelta(days=365), now
 
 
