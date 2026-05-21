@@ -235,14 +235,26 @@ def _generate_sections(raw: dict, llm) -> dict[str, SR117Section]:
     the full dataset is still used for data_points in the rendered sections.
     This keeps the prompt well within free-tier TPM limits on Groq.
     """
+    # Build a compact run summary for the LLM — feature_results is a full
+    # per-detector list (~1,400 tokens/run) that the LLM doesn't need for prose.
+    # Replace it with the top-3 drifted feature names derived from the same data.
+    def _slim_run(r: dict) -> dict:
+        fr = r.get("feature_results") or {}
+        if isinstance(fr, list):
+            scores = {entry["feature_name"]: entry["score"] for entry in fr if isinstance(entry, dict)}
+        elif isinstance(fr, dict):
+            scores = {k: (v.get("score", 0) if isinstance(v, dict) else 0) for k, v in fr.items()}
+        else:
+            scores = {}
+        top = sorted(scores, key=scores.get, reverse=True)[:3]  # type: ignore[arg-type]
+        return {k: v for k, v in r.items() if k != "feature_results"} | {"top_features": top}
+
     llm_raw = {
         **raw,
-        # 5 most-recent runs with regime variety is enough for coherent prose
-        "drift_runs":       raw["drift_runs"][-5:],
-        # 3 unique dates already after dedup; slice is a no-op but makes intent explicit
-        "macro_snapshots":  raw["macro_snapshots"][:3],
-        # Agent decisions are already few; pass all
-        "agent_decisions":  raw["agent_decisions"],
+        # 5 most-recent runs, feature_results stripped down to top-3 names
+        "drift_runs":      [_slim_run(r) for r in raw["drift_runs"][-5:]],
+        "macro_snapshots": raw["macro_snapshots"][:3],
+        "agent_decisions": raw["agent_decisions"],
     }
     context = json.dumps(llm_raw, indent=2, default=str)
     messages = [
