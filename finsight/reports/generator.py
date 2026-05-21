@@ -229,8 +229,22 @@ def _collect_data(model_id: str, start: datetime, end: datetime) -> dict:
 # ── LLM section generation ─────────────────────────────────────────────────────
 
 def _generate_sections(raw: dict, llm) -> dict[str, SR117Section]:
-    """Single LLM call returns JSON with prose for all 7 sections."""
-    context = json.dumps(raw, indent=2, default=str)
+    """Single LLM call returns JSON with prose for all 7 sections.
+
+    Only a representative slice of runs/snapshots is sent to the LLM —
+    the full dataset is still used for data_points in the rendered sections.
+    This keeps the prompt well within free-tier TPM limits on Groq.
+    """
+    llm_raw = {
+        **raw,
+        # 5 most-recent runs with regime variety is enough for coherent prose
+        "drift_runs":       raw["drift_runs"][-5:],
+        # 3 unique dates already after dedup; slice is a no-op but makes intent explicit
+        "macro_snapshots":  raw["macro_snapshots"][:3],
+        # Agent decisions are already few; pass all
+        "agent_decisions":  raw["agent_decisions"],
+    }
+    context = json.dumps(llm_raw, indent=2, default=str)
     messages = [
         {"role": "system", "content": REPORT_WRITER_PROMPT},
         {"role": "user", "content": f"RAW_DATA:\n{context}"},
