@@ -80,17 +80,18 @@ def get_latest_macro():
         )
 
 
-def run_drift_check(model_id: str, current: DataSnapshot):
+def run_drift_check(model_id: str, current: DataSnapshot, macro=None):
     """
     Run drift check. Loads baseline from SQLite automatically.
-    Attaches latest cached macro snapshot if available.
+    Uses provided macro snapshot when given; otherwise fetches latest cached macro.
     """
     baseline = load_baseline(model_id)
     if baseline is None:
         logger.warning(f"No baseline for '{model_id}' — skipping")
         return None
 
-    macro   = get_latest_macro()
+    if macro is None:
+        macro = get_latest_macro()
     monitor = Monitor(model_id=model_id)
     result  = monitor.check(baseline, current, macro=macro)
 

@@ -24,6 +24,7 @@ from ..schemas import DriftRunOut, DriftForecastOut
 from ...scheduler.jobs import run_drift_check, register_baseline
 from ...core.snapshot import DataSnapshot
 from ...store.database import MacroCache as MacroCacheModel
+from ...regime.macro_signals import MacroSnapshot as _MacroSnapshot
 
 
 router = APIRouter(prefix="/drift", tags=["drift"])
@@ -128,9 +129,18 @@ def get_feature_results(
         raise HTTPException(status_code=404, detail="Run not found")
     return json.loads(run.feature_results_json)
 
+class MacroOverride(BaseModel):
+    vix:              float | None = None
+    credit_spread:    float | None = None
+    fed_funds_rate:   float | None = None
+    yield_curve:      float | None = None
+    unemployment_rate: float | None = None
+
+
 class RunCheckRequest(BaseModel):
     records: list[dict[str, Any]]   # list of row dicts — same format as df.to_dict("records")
     set_as_baseline: bool = False
+    macro: MacroOverride | None = None
 
 
 @router.post("/{model_id}/run")
@@ -152,10 +162,22 @@ def trigger_drift_check(
         register_baseline(model_id, snapshot)
         return {"message": f"Baseline set for '{model_id}'", "rows": len(df)}
 
+    macro_override: _MacroSnapshot | None = None
+    if payload.macro is not None:
+        from datetime import date as _date
+        macro_override = _MacroSnapshot(
+            as_of=_date.today(),
+            vix=payload.macro.vix,
+            credit_spread=payload.macro.credit_spread,
+            fed_funds_rate=payload.macro.fed_funds_rate,
+            yield_curve=payload.macro.yield_curve,
+            unemployment_rate=payload.macro.unemployment_rate,
+        )
+
     with _drift_span("api.drift_run") as span:
         if span is not None:
             span.set_attribute("model.id", model_id)
-        result = run_drift_check(model_id, snapshot)
+        result = run_drift_check(model_id, snapshot, macro=macro_override)
         if result is None:
             raise HTTPException(
                 status_code=400,
