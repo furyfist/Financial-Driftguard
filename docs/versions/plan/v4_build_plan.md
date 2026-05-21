@@ -6,6 +6,7 @@
 **Target version:** `v0.4.0`  
 **Built on top of:** V3 — governance agent, trust API, PDF reports, 3 demo scenarios  
 **Date:** May 2026  
+**Session execution plan:** [v4_session_plan.md](v4_session_plan.md)  
 
 ---
 
