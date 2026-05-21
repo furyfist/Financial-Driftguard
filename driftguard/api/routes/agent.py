@@ -161,7 +161,7 @@ def _run_agent(fn):
 def _default_date_range() -> str:
     from datetime import timedelta
     end   = datetime.now(timezone.utc)
-    start = end - timedelta(days=30)
+    start = end - timedelta(days=365)  # cover seeded runs stored months ago
     return f"{start.strftime('%Y-%m-%d')}/{end.strftime('%Y-%m-%d')}"
 
 

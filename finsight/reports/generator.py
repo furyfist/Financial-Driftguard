@@ -159,6 +159,17 @@ def _collect_data(model_id: str, start: datetime, end: datetime) -> dict:
                 .order_by(AgentDecisionLog.created_at)  # type: ignore[arg-type]
             ).all()
 
+        # Deduplicate macro records — MacroCache stores one row per 6-hour fetch.
+        # Keep only the most recent record per calendar date for clean report output.
+        _seen_dates: set = set()
+        _deduped_macro: list = []
+        for m in reversed(macro_records):  # reversed = most-recent-first
+            day = m.fetched_at.date()
+            if day not in _seen_dates:
+                _seen_dates.add(day)
+                _deduped_macro.append(m)
+        _deduped_macro.reverse()  # restore chronological order
+
         return {
             "model": {
                 "model_id": model.model_id if model else model_id,
@@ -188,7 +199,7 @@ def _collect_data(model_id: str, start: datetime, end: datetime) -> dict:
                     "regime": m.regime,
                     "regime_confidence": m.regime_confidence,
                 }
-                for m in macro_records
+                for m in _deduped_macro
             ],
             "agent_decisions": [
                 {
@@ -347,10 +358,10 @@ def _parse_date_range(date_range: str) -> tuple[datetime, datetime]:
         end   = datetime.fromisoformat(parts[1].strip()).replace(tzinfo=timezone.utc)
         return start, end
     except Exception:
-        # Default: last 30 days
+        # Default: last 365 days — covers seeded demo runs stored months ago
         now = datetime.now(timezone.utc)
         from datetime import timedelta
-        return now - timedelta(days=30), now
+        return now - timedelta(days=365), now
 
 
 def _safe_json(s: str) -> Any:
