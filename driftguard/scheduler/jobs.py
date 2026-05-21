@@ -208,6 +208,53 @@ def _run_daily_forecast() -> None:
         logger.warning("Daily forecast job failed: %s", exc)
 
 
+def _run_weekly_digest() -> None:
+    """
+    Monday 08:00 UTC — generate a health digest for every registered model.
+    Fires Slack/email notification if status_light is amber or red.
+    Best-effort per model — never raises.
+    """
+    try:
+        from finsight.reports.digest import DigestGenerator
+    except ImportError:
+        logger.info("_run_weekly_digest: finsight not installed — skipping")
+        return
+
+    try:
+        with Session(engine) as session:
+            records = session.exec(select(ModelRecord)).all()
+            model_ids = [r.model_id for r in records]
+    except Exception as exc:
+        logger.warning("_run_weekly_digest: failed to load model IDs: %s", exc)
+        return
+
+    for model_id in model_ids:
+        try:
+            report = DigestGenerator().generate(model_id)
+            logger.info(
+                "Digest [%s] status=%s trend=%s — %s",
+                model_id, report.status_light, report.drift_trend, report.one_liner,
+            )
+
+            if report.status_light in ("amber", "red"):
+                severity = "critical" if report.status_light == "red" else "high"
+                payload = NotificationPayload(
+                    model_id=model_id,
+                    overall_severity=severity,
+                    drift_score=0.0,
+                    regime=report.regime_current,
+                    regime_confidence=0.0,
+                    recommendation=report.one_liner,
+                    top_features=[],
+                    checked_at=report.generated_at.isoformat(),
+                )
+                for notifier in _get_notifiers_for_model(model_id):
+                    notifier.notify(payload)
+
+        except Exception as exc:
+            logger.warning("_run_weekly_digest: error for model %s: %s", model_id, exc)
+
+
 def start_scheduler(interval_minutes: int = 30):
     if scheduler.running:
         return
@@ -231,8 +278,19 @@ def start_scheduler(interval_minutes: int = 30):
         replace_existing=True,
     )
 
+    # Weekly digest — every Monday 08:00 UTC
+    scheduler.add_job(
+        _run_weekly_digest,
+        trigger="cron",
+        day_of_week="mon",
+        hour=8,
+        minute=0,
+        id="weekly_digest",
+        replace_existing=True,
+    )
+
     scheduler.start()
-    logger.info(f"Scheduler started — macro every 6h, forecast every 24h")
+    logger.info("Scheduler started — macro every 6h, forecast every 24h, digest every Monday 08:00")
 
 def register_notifier(
     notifier: BaseNotifier,
