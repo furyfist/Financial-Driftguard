@@ -13,6 +13,18 @@ export interface Model {
   created_at: string
 }
 
+export interface ModelVersion {
+  id: number
+  model_id: string
+  version_label: string
+  description: string
+  baseline_rows: number | null
+  created_at: string
+  promoted_at: string | null
+  demoted_at: string | null
+  is_active: boolean
+}
+
 export interface DriftRun {
   id: number
   model_id: string
@@ -21,6 +33,7 @@ export interface DriftRun {
   drift_score: number
   regime: Regime | null
   notes: string
+  model_version_id: number | null
 }
 
 export interface FeatureResult {
