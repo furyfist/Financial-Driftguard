@@ -31,7 +31,7 @@ def _current_trace_id() -> str | None:
         pass
     return None
 
-from ...store.database import DriftRun, AlertRecord, ModelRecord, get_session
+from ...store.database import DriftRun, AlertRecord, ModelRecord, ModelVersion, get_session
 from ..schemas import DriftRunOut, DriftForecastOut
 from ...scheduler.jobs import run_drift_check, register_baseline
 from ...core.snapshot import DataSnapshot
@@ -105,6 +105,7 @@ def get_drift_history(
     feature: str | None = None,
     since: str | None = None,
     until: str | None = None,
+    version: str | None = None,
     session: Session = Depends(get_session),
 ):
     from datetime import datetime as _dt
@@ -125,6 +126,17 @@ def get_drift_history(
         q = q.where(DriftRun.checked_at >= _dt.fromisoformat(since))
     if until is not None:
         q = q.where(DriftRun.checked_at <= _dt.fromisoformat(until))
+    if version is not None:
+        ver_record = session.exec(
+            select(ModelVersion).where(
+                ModelVersion.model_id == model_id,
+                ModelVersion.version_label == version,
+            )
+        ).first()
+        if ver_record:
+            q = q.where(DriftRun.model_version_id == ver_record.id)
+        else:
+            return []
 
     runs = session.exec(q.order_by(desc(DriftRun.checked_at)).limit(limit)).all()
     return runs
