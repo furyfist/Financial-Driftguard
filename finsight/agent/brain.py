@@ -13,6 +13,11 @@ from finsight.agent.tools.macro_tools import MACRO_TOOLS, call_macro_tool
 from finsight.agent.tools.experiment_tools import EXPERIMENT_TOOLS, call_experiment_tool
 from finsight.agent.tools.trust_tools import TRUST_TOOLS, call_trust_tool
 
+try:
+    from finsight.adk.config import is_adk_enabled as _is_adk_enabled
+except ImportError:
+    def _is_adk_enabled() -> bool: return False
+
 logger = logging.getLogger(__name__)
 
 # Every LLM call uses low temperature — governance decisions must be deterministic
@@ -64,6 +69,18 @@ class DriftGuardAgent:
         Calls tools in sequence per the orchestrator prompt's reasoning process,
         then returns a structured recommendation.
         """
+        if _is_adk_enabled():
+            try:
+                from finsight.adk.agents import run_adk_analysis
+                query = f"Analyze model '{model_id}'"
+                adk_text = run_adk_analysis(model_id or "", query)
+                result = _parse_response(adk_text)
+                result.model_id = model_id
+                _maybe_notify(result, model_id)
+                return result
+            except Exception as exc:
+                logger.warning("ADK path failed (%s) — falling back to native", exc)
+
         impact_hint = _get_impact_hint(model_id)
         content = (
             f"Perform a complete drift governance analysis for model '{model_id}'. "
@@ -95,6 +112,17 @@ class DriftGuardAgent:
         Conversational interface for the risk officer chat endpoint.
         Optionally uses ConversationMemory for multi-turn context.
         """
+        if _is_adk_enabled():
+            try:
+                from finsight.adk.agents import run_adk_analysis
+                adk_text = run_adk_analysis(model_id or "", query)
+                result = _parse_response(adk_text)
+                result.model_id = model_id
+                _maybe_notify(result, model_id)
+                return result
+            except Exception as exc:
+                logger.warning("ADK path failed (%s) — falling back to native", exc)
+
         system = _system_prompt()
 
         if memory is not None:
