@@ -100,20 +100,33 @@ def get_drift_forecast(
 def get_drift_history(
     model_id: str,
     limit: int = 50,
+    regime: str | None = None,
+    severity: str | None = None,
+    feature: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
     session: Session = Depends(get_session),
 ):
+    from datetime import datetime as _dt
     model = session.exec(
         select(ModelRecord).where(ModelRecord.model_id == model_id)
     ).first()
     if not model:
         raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
 
-    runs = session.exec(
-        select(DriftRun)
-        .where(DriftRun.model_id == model_id)
-        .order_by(desc(DriftRun.checked_at))
-        .limit(limit)
-    ).all()
+    q = select(DriftRun).where(DriftRun.model_id == model_id)
+    if regime is not None:
+        q = q.where(DriftRun.regime == regime)
+    if severity is not None:
+        q = q.where(DriftRun.overall_severity == severity)
+    if feature is not None:
+        q = q.where(DriftRun.feature_results_json.contains(feature))
+    if since is not None:
+        q = q.where(DriftRun.checked_at >= _dt.fromisoformat(since))
+    if until is not None:
+        q = q.where(DriftRun.checked_at <= _dt.fromisoformat(until))
+
+    runs = session.exec(q.order_by(desc(DriftRun.checked_at)).limit(limit)).all()
     return runs
 
 
