@@ -41,6 +41,17 @@ from ...regime.macro_signals import MacroSnapshot as _MacroSnapshot
 
 router = APIRouter(prefix="/drift", tags=["drift"])
 
+
+@router.get("/feature-meta")
+def get_feature_meta():
+    """Return static domain descriptions for all known features (no LLM call)."""
+    try:
+        from finsight.impact.feature_metadata import FEATURE_METADATA
+        return FEATURE_METADATA
+    except ImportError:
+        return {}
+
+
 @router.get("/macro/latest")
 def get_latest_macro_snapshot(session: Session = Depends(get_session)):
     """Returns the most recently cached macro snapshot and regime."""

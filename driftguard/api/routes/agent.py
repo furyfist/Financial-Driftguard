@@ -52,6 +52,7 @@ def analyze(
         reasoning=result.reasoning,
         sources=result.sources,
         model_id=result.model_id,
+        regime=result.regime,
     )
 
 
@@ -76,6 +77,7 @@ def ask(
         reasoning=result.reasoning,
         sources=result.sources,
         model_id=result.model_id,
+        regime=result.regime,
     )
 
 

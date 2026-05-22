@@ -74,6 +74,7 @@ class AgentResponseOut(BaseModel):
     reasoning: str
     sources: list[str] = []
     model_id: Optional[str] = None
+    regime: Optional[str] = None
 
 
 class AgentLogOut(BaseModel):
