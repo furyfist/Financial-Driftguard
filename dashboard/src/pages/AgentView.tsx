@@ -170,7 +170,7 @@ export function AgentView() {
         role:       "agent",
         text:       resp.recommendation,
         action:     resp.action,
-        regime:     null,
+        regime:     (resp.regime as any) ?? null,
         confidence: resp.confidence,
         reasoning:  resp.reasoning,
         sources:    resp.sources,

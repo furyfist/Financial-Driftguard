@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import type { DriftRun, FeatureResult, AgentLogEntry, ModelVersion } from "../types"
-import { driftApi, versionsApi } from "../api/client"
+import { driftApi, versionsApi, featureMetaApi } from "../api/client"
 import { agentApi } from "../api/agent-client"
 import { RegimeBadge } from "../components/RegimeBadge"
 import { SeverityBar } from "../components/SeverityBar"
@@ -40,6 +40,7 @@ export function ModelDetail() {
   const [loading, setLoading]         = useState(true)
   const [versions, setVersions]       = useState<ModelVersion[]>([])
   const [selectedVersion, setSelectedVersion] = useState<string>("")
+  const [featureMeta, setFeatureMeta] = useState<Record<string, string>>({})
 
   const loadHistory = (version?: string) => {
     if (!modelId) return
@@ -60,6 +61,8 @@ export function ModelDetail() {
 
   useEffect(() => {
     if (!modelId) return
+
+    featureMetaApi.get().then(setFeatureMeta).catch(() => {})
 
     versionsApi.list(modelId).then(vs => {
       setVersions(vs)
@@ -175,6 +178,14 @@ export function ModelDetail() {
                     regime={agentLog.regime_context as any || latest.regime}
                     recommendation=""
                     topFeatures={features.slice(0, 3).map(f => f.feature_name)}
+                    featureExplanations={
+                      Object.fromEntries(
+                        features.slice(0, 3)
+                          .map(f => f.feature_name)
+                          .filter(name => featureMeta[name])
+                          .map(name => [name, featureMeta[name]])
+                      )
+                    }
                   />
                 )}
 

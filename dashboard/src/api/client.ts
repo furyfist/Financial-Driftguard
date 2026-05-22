@@ -56,3 +56,7 @@ export const experimentsApi = {
   results: (modelId: string) =>
     api.get<ChallengerResult>(`/experiments/${modelId}/results`).then(r => r.data),
 }
+
+export const featureMetaApi = {
+  get: () => api.get<Record<string, string>>("/drift/feature-meta").then(r => r.data),
+}
