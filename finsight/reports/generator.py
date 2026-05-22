@@ -365,10 +365,20 @@ def _generate_sections(raw: dict, llm) -> dict[str, SR117Section]:
         # Pass total so the LLM cites the real count, not the capped slice
         "total_drift_runs": len(raw["drift_runs"]),
     }
+    total_run_count = len(raw["drift_runs"])
     context = json.dumps(llm_raw, indent=2, default=str)
     messages = [
         {"role": "system", "content": REPORT_WRITER_PROMPT},
-        {"role": "user", "content": f"RAW_DATA:\n{context}"},
+        {
+            "role": "user",
+            "content": (
+                f"RAW_DATA:\n{context}\n\n"
+                f"SECTION 7 INSTRUCTION: There were {total_run_count} drift checks "
+                f"performed in this period. You must state this exact number in the "
+                f"audit_trail prose — do not count the drift_runs array above, which "
+                f"is a capped 5-run preview only."
+            ),
+        },
     ]
     try:
         response = llm.complete(messages, temperature=0.3)
