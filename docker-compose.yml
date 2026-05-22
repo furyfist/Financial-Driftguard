@@ -16,5 +16,25 @@ services:
     depends_on:
       - phoenix
 
+  backend:
+    build: .
+    command: uvicorn driftguard.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006
+    depends_on:
+      - phoenix
+    volumes:
+      - ./driftguard.db:/app/driftguard.db
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
 volumes:
   phoenix_data:
