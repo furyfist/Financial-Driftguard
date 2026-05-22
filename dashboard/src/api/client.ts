@@ -1,5 +1,5 @@
 import axios from "axios"
-import type { Model, DriftRun, FeatureResult, Alert } from "../types"
+import type { Model, DriftRun, FeatureResult, Alert, ModelVersion } from "../types"
 import type { MacroSnapshot, WebhookConfig, DriftForecast, ChallengerResult } from "../types"
 
 const api = axios.create({ baseURL: "http://localhost:8000" })
@@ -13,9 +13,19 @@ export const modelsApi = {
 
 export const driftApi = {
   latest:  (id: string) => api.get<DriftRun>(`/drift/${id}/latest`).then(r => r.data),
-  history: (id: string) => api.get<DriftRun[]>(`/drift/${id}/history`).then(r => r.data),
+  history: (id: string, version?: string) =>
+    api.get<DriftRun[]>(`/drift/${id}/history`, { params: version ? { version } : {} }).then(r => r.data),
   features: (id: string, runId: number) =>
     api.get<FeatureResult[]>(`/drift/${id}/features/${runId}`).then(r => r.data),
+}
+
+export const versionsApi = {
+  list:    (modelId: string) =>
+    api.get<ModelVersion[]>(`/models/${modelId}/versions`).then(r => r.data),
+  create:  (modelId: string, version_label: string, description?: string) =>
+    api.post<ModelVersion>(`/models/${modelId}/versions`, { version_label, description }).then(r => r.data),
+  promote: (modelId: string, versionLabel: string) =>
+    api.post<ModelVersion>(`/models/${modelId}/versions/${versionLabel}/promote`).then(r => r.data),
 }
 
 export const alertsApi = {
