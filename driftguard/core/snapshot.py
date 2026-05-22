@@ -17,8 +17,16 @@ class DataSnapshot:
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, label: str) -> "DataSnapshot":
         snap = cls(label=label)
-        for col in df.select_dtypes(include=[np.number]).columns:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        for col in numeric_cols:
             snap._features[col] = df[col].dropna().to_numpy(dtype=float)
+        if numeric_cols:
+            min_rows = min(len(snap._features[col]) for col in numeric_cols)
+            if min_rows < 100:
+                raise ValueError(
+                    f"DataSnapshot requires at least 100 rows per feature; "
+                    f"got {min_rows} in '{label}'."
+                )
         return snap
 
     def feature_names(self) -> list[str]:

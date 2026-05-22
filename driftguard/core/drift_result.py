@@ -41,6 +41,15 @@ class DriftResult:
         return [f for f in self.feature_results if f.is_drifted]
 
     @property
+    def unique_drifted_features(self) -> list[FeatureDriftResult]:
+        """One entry per feature name — keeps the highest-score entry per feature."""
+        best: dict[str, FeatureDriftResult] = {}
+        for f in self.drifted_features:
+            if f.feature_name not in best or f.score > best[f.feature_name].score:
+                best[f.feature_name] = f
+        return list(best.values())
+
+    @property
     def drift_score(self) -> float:
         """Normalised 0-1 score across all features."""
         if not self.feature_results:

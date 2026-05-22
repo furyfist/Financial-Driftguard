@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,10 +10,47 @@ from .auth import APIKeyMiddleware
 from ..store.database import create_db
 from ..scheduler.jobs import start_scheduler, stop_scheduler, restore_baselines_from_db
 
+_log = logging.getLogger(__name__)
+
+
+def _warn_missing_env() -> None:
+    """Log warnings for missing or placeholder env vars at startup."""
+    provider = os.getenv("LLM_PROVIDER", "groq").lower()
+
+    core_keys = ["FRED_API_KEY"]
+    if provider == "gemini":
+        core_keys.append("GEMINI_API_KEY")
+    else:
+        core_keys.append("GROQ_API_KEY")
+
+    for key in core_keys:
+        val = os.getenv(key, "")
+        if not val or val.startswith("your_"):
+            _log.warning(
+                "Startup warning: %s is not set — core LLM/macro features will be degraded", key
+            )
+
+    for key, feature in [
+        ("SLACK_WEBHOOK_URL", "Slack notifications"),
+        ("SMTP_HOST", "email notifications"),
+    ]:
+        val = os.getenv(key, "")
+        if not val or val.startswith("your_"):
+            _log.warning(
+                "Startup warning: %s is not set — %s will be degraded", key, feature
+            )
+
+    phoenix_key = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "")
+    if not phoenix_key or phoenix_key.startswith("your_"):
+        _log.warning(
+            "Startup warning: PHOENIX_COLLECTOR_ENDPOINT is not set — tracing will be degraded"
+        )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db()
+    _warn_missing_env()
     restore_baselines_from_db()
     try:
         import os
@@ -75,3 +113,18 @@ except ImportError:
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "0.2.0"}
+
+
+@app.get("/health/scheduler")
+def scheduler_health():
+    from ..scheduler.jobs import scheduler
+    if not scheduler.running:
+        return {"status": "stopped", "jobs": []}
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({
+            "id": job.id,
+            "next_run": str(job.next_run_time) if job.next_run_time else None,
+            "trigger": str(job.trigger),
+        })
+    return {"status": "running", "jobs": jobs}

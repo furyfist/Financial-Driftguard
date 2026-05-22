@@ -174,9 +174,30 @@ def restore_baselines_from_db():
         else:
             logger.info(f"{loaded} model baseline(s) ready")
 
+    # Restore persisted webhook notifiers
+    try:
+        from ..store.database import WebhookConfigRecord
+        from ..notifications.discord import DiscordNotifier
+        from ..notifications.slack import SlackNotifier
+        with Session(engine) as session:
+            configs = session.exec(select(WebhookConfigRecord)).all()
+            for cfg in configs:
+                if cfg.platform == "slack":
+                    n = SlackNotifier(webhook_url=cfg.webhook_url, severity_threshold=cfg.severity_threshold)
+                elif cfg.platform == "discord":
+                    n = DiscordNotifier(webhook_url=cfg.webhook_url, severity_threshold=cfg.severity_threshold)
+                else:
+                    continue
+                register_notifier(n, model_id=cfg.model_id)
+        if configs:
+            logger.info("%d webhook notifier(s) restored from DB", len(configs))
+    except Exception as exc:
+        logger.warning("Failed to restore webhook notifiers: %s", exc)
+
     # Fetch macro immediately so regime is available from first request
-    logger.info("Fetching initial macro snapshot...")
-    fetch_and_cache_macro()
+    import threading
+    logger.info("Fetching initial macro snapshot in background...")
+    threading.Thread(target=fetch_and_cache_macro, daemon=True, name="macro-init").start()
 
 def start_scheduler(interval_minutes: int = 30):
     if scheduler.running:

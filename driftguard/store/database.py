@@ -50,6 +50,16 @@ class MacroCache(SQLModel, table=True):
     regime_confidence: Optional[float] = None
 
 
+class WebhookConfigRecord(SQLModel, table=True):
+    """Persisted webhook notifier configuration — restored on startup."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    platform: str                            # "slack" | "discord"
+    webhook_url: str
+    model_id: Optional[str] = None
+    severity_threshold: str = "high"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class AgentDecisionLog(SQLModel, table=True):
     """Audit log — every agent recommendation persisted for governance traceability."""
     id: Optional[int] = Field(default=None, primary_key=True)
