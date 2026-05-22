@@ -14,6 +14,23 @@ class ModelOut(BaseModel):
     created_at: datetime
 
 
+class ModelVersionCreate(BaseModel):
+    version_label: str
+    description: str = ""
+
+
+class ModelVersionOut(BaseModel):
+    id: int
+    model_id: str
+    version_label: str
+    description: str
+    baseline_rows: Optional[int]
+    created_at: datetime
+    promoted_at: Optional[datetime]
+    demoted_at: Optional[datetime]
+    is_active: bool
+
+
 class DriftRunOut(BaseModel):
     id: int
     model_id: str
@@ -23,6 +40,7 @@ class DriftRunOut(BaseModel):
     regime: Optional[str]
     notes: str
     phoenix_trace_id: Optional[str] = None
+    model_version_id: Optional[int] = None
 
 
 class AlertOut(BaseModel):

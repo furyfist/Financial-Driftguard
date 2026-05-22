@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 from .auth import APIKeyMiddleware
 
-from ..store.database import create_db
+from ..store.database import create_db, migrate_model_versions
 from ..scheduler.jobs import start_scheduler, stop_scheduler, restore_baselines_from_db
 
 _log = logging.getLogger(__name__)
@@ -50,6 +50,7 @@ def _warn_missing_env() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db()
+    migrate_model_versions()
     _warn_missing_env()
     restore_baselines_from_db()
     try:
@@ -79,8 +80,9 @@ app.add_middleware(
 )
 app.add_middleware(APIKeyMiddleware)
 
-from .routes import models, drift, alerts, demo
+from .routes import models, drift, alerts, demo, versions
 app.include_router(models.router)
+app.include_router(versions.router)
 app.include_router(drift.router)
 app.include_router(alerts.router)
 app.include_router(demo.router)

@@ -2,6 +2,9 @@ from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 import io
+import logging
+
+_log = logging.getLogger(__name__)
 
 
 class ModelRecord(SQLModel, table=True):
@@ -12,6 +15,20 @@ class ModelRecord(SQLModel, table=True):
     baseline_data: Optional[bytes] = Field(default=None)   # parquet blob
     baseline_set_at: Optional[datetime] = Field(default=None)
     baseline_row_count: Optional[int] = Field(default=None)
+
+
+class ModelVersion(SQLModel, table=True):
+    """Tracks discrete versions of a model — each retrain creates a new version."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    model_id: str = Field(index=True, foreign_key="modelrecord.model_id")
+    version_label: str                           # e.g. "v1", "v2"
+    description: str = ""
+    baseline_blob: Optional[bytes] = Field(default=None)
+    baseline_rows: Optional[int] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    promoted_at: Optional[datetime] = None
+    demoted_at: Optional[datetime] = None
+    is_active: bool = False
 
 
 class DriftRun(SQLModel, table=True):
@@ -25,6 +42,7 @@ class DriftRun(SQLModel, table=True):
     notes: str = ""
     feature_results_json: str = "{}"
     phoenix_trace_id: Optional[str] = None      # new in v4
+    model_version_id: Optional[int] = Field(default=None, foreign_key="modelversion.id")
 
 
 class AlertRecord(SQLModel, table=True):
@@ -71,6 +89,7 @@ class AgentDecisionLog(SQLModel, table=True):
     regime_context: str = ""          # regime at time of decision
     trace_ids_referenced: str = "[]"  # JSON array of Phoenix trace IDs cited
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_version_id: Optional[int] = Field(default=None, foreign_key="modelversion.id")
 
 
 sqlite_url = "sqlite:///./driftguard.db"
@@ -84,6 +103,49 @@ def create_db():
 def get_session():
     with Session(engine) as session:
         yield session
+
+
+def migrate_model_versions() -> None:
+    """Auto-create 'v1' for each model that has no version yet and assign existing runs to it."""
+    try:
+        with Session(engine) as session:
+            models = session.exec(select(ModelRecord)).all()
+            for m in models:
+                existing = session.exec(
+                    select(ModelVersion).where(ModelVersion.model_id == m.model_id)
+                ).first()
+                if existing:
+                    continue
+                v1 = ModelVersion(
+                    model_id=m.model_id,
+                    version_label="v1",
+                    description="Initial version (auto-created on migration)",
+                    is_active=True,
+                    promoted_at=datetime.now(timezone.utc),
+                )
+                session.add(v1)
+                session.flush()
+                unversioned_runs = session.exec(
+                    select(DriftRun).where(
+                        DriftRun.model_id == m.model_id,
+                        DriftRun.model_version_id == None,  # noqa: E711
+                    )
+                ).all()
+                for run in unversioned_runs:
+                    run.model_version_id = v1.id
+                    session.add(run)
+                unversioned_decisions = session.exec(
+                    select(AgentDecisionLog).where(
+                        AgentDecisionLog.model_id == m.model_id,
+                        AgentDecisionLog.model_version_id == None,  # noqa: E711
+                    )
+                ).all()
+                for d in unversioned_decisions:
+                    d.model_version_id = v1.id
+                    session.add(d)
+            session.commit()
+    except Exception as exc:
+        _log.warning("migrate_model_versions: %s", exc)
 
 
 def snapshot_to_bytes(snapshot) -> bytes:
