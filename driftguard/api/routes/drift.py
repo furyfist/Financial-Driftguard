@@ -235,7 +235,7 @@ def trigger_drift_check(
         "notes": result.notes,
         "drifted_features": [
             {"feature": f.feature_name, "detector": f.detector, "score": f.score}
-            for f in result.drifted_features
+            for f in result.unique_drifted_features
         ],
     }
 

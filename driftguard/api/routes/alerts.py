@@ -5,7 +5,7 @@ from pydantic import BaseModel as PydanticBase
 from ...scheduler.jobs import register_notifier
 from ...notifications.discord import DiscordNotifier
 from ...notifications.slack import SlackNotifier
-from ...store.database import AlertRecord, get_session
+from ...store.database import AlertRecord, WebhookConfigRecord, engine, get_session
 from ..schemas import AlertOut, AckRequest
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -70,6 +70,14 @@ def configure_webhook(payload: WebhookConfig):
         )
 
     register_notifier(notifier, model_id=payload.model_id)
+    with Session(engine) as s:
+        s.add(WebhookConfigRecord(
+            platform=payload.platform,
+            webhook_url=payload.webhook_url,
+            model_id=payload.model_id,
+            severity_threshold=payload.severity_threshold,
+        ))
+        s.commit()
     return {
         "configured": payload.platform,
         "model_id":   payload.model_id or "all models",
