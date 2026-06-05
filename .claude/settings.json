@@ -5,7 +5,9 @@
       "Bash(curl -s http://localhost:8000/health)",
       "Bash(ls .env*)",
       "Bash(ls *.env)",
-      "Bash(dir /b .env*)"
+      "Bash(dir /b .env*)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\financial-driftguard\\\\docs\\\\\" -Recurse | Select-Object -Property FullName | Sort-Object FullName)",
+      "Bash(grep -E \"\\\\.\\(md|txt\\)$\")"
     ]
   }
 }
