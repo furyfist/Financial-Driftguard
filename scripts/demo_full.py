@@ -11,10 +11,12 @@ Each scenario pauses so you can walk judges through the output before
 moving to the next. Pass --auto to skip the pauses and run continuously.
 
 Usage:
-  python scripts/demo_full.py           # interactive (pauses between scenarios)
-  python scripts/demo_full.py --auto    # fully automated (CI / recording mode)
+  python scripts/demo_full.py             # interactive
+  python scripts/demo_full.py --auto      # fully automated (CI / recording mode)
+  python scripts/demo_full.py --smoke     # Gemini + ADK env smoke check (no LLM calls)
 """
 
+import os
 import sys
 import time
 import argparse
@@ -48,18 +50,56 @@ SEPARATOR = "═" * 65
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="FinSight AI full demo runner")
-    parser.add_argument(
-        "--auto",
-        action="store_true",
-        help="Run all scenarios without pausing",
-    )
-    parser.add_argument(
-        "--delay",
-        type=float,
-        default=3.0,
-        help="Seconds between scenarios in auto mode (default: 3.0)",
-    )
+    parser.add_argument("--auto", action="store_true", help="Run all scenarios without pausing")
+    parser.add_argument("--smoke", action="store_true", help="Smoke-check Gemini + ADK env, then exit")
+    parser.add_argument("--delay", type=float, default=3.0, help="Seconds between scenarios in auto mode")
     return parser.parse_args()
+
+
+EXPECTED_REGIMES = {
+    "rate_hike_2017": {"regime_contains": ["credit_stress", "rate_shock"], "action_not": ["retrain"]},
+    "covid_crash":    {"regime_contains": ["black_swan"],                  "action_in":  ["freeze", "halt"]},
+    "normal_decay":   {"regime_contains": ["stable"],                      "action_in":  ["retrain", "investigate"]},
+}
+
+
+def run_smoke_check() -> int:
+    """Validate Gemini + ADK environment without making LLM calls. Returns exit code."""
+    print("\n── V5 Gemini + ADK Smoke Check ──\n")
+    checks = [
+        ("LLM_PROVIDER == gemini",       os.getenv("LLM_PROVIDER", "").lower() == "gemini"),
+        ("GEMINI_API_KEY set",            bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_API_KEY"))),
+        ("AGENT_FRAMEWORK == adk",        os.getenv("AGENT_FRAMEWORK", "").lower() == "adk"),
+        ("PHOENIX_COLLECTOR_ENDPOINT set",bool(os.getenv("PHOENIX_COLLECTOR_ENDPOINT"))),
+        ("PHOENIX_API_KEY set",           bool(os.getenv("PHOENIX_API_KEY"))),
+        ("DATABASE_URL set",              bool(os.getenv("DATABASE_URL"))),
+        ("LLM_REASONING_MODEL set",       bool(os.getenv("LLM_REASONING_MODEL"))),
+        ("LLM_FAST_MODEL set",            bool(os.getenv("LLM_FAST_MODEL"))),
+    ]
+
+    import importlib.util
+    adk_available = importlib.util.find_spec("google.adk") is not None
+    oi_available = importlib.util.find_spec("openinference.instrumentation.google_adk") is not None
+    checks += [
+        ("google-adk importable",         adk_available),
+        ("openinference-instrumentation-google-adk importable", oi_available),
+    ]
+
+    passed = failed = 0
+    for label, ok in checks:
+        mark = "✅" if ok else "❌"
+        print(f"  {mark}  {label}")
+        if ok:
+            passed += 1
+        else:
+            failed += 1
+
+    print(f"\n  {passed}/{passed + failed} checks passed")
+    if failed > 0:
+        print("  Set missing env vars before the submission run.\n")
+        return 1
+    print("  All env checks passed — ready for Gemini + ADK run.\n")
+    return 0
 
 
 def print_header() -> None:
@@ -144,6 +184,10 @@ def print_summary(results: list[dict]) -> None:
 
 def main() -> None:
     args = parse_args()
+
+    if args.smoke:
+        sys.exit(run_smoke_check())
+
     print_header()
 
     if not args.auto:
