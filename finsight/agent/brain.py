@@ -75,9 +75,8 @@ class DriftGuardAgent:
             try:
                 from finsight.adk.agents import run_adk_analysis
                 query = f"Analyze model '{model_id}'"
-                adk_text = run_adk_analysis(model_id or "", query)
-                result = _parse_response(adk_text)
-                result.model_id = model_id
+                adk_result = run_adk_analysis(model_id or "", query)
+                result = _parse_adk_result(adk_result, model_id)
                 _maybe_notify(result, model_id)
                 return result
             except Exception as exc:
@@ -117,9 +116,8 @@ class DriftGuardAgent:
         if _is_adk_enabled():
             try:
                 from finsight.adk.agents import run_adk_analysis
-                adk_text = run_adk_analysis(model_id or "", query)
-                result = _parse_response(adk_text)
-                result.model_id = model_id
+                adk_result = run_adk_analysis(model_id or "", query)
+                result = _parse_adk_result(adk_result, model_id)
                 _maybe_notify(result, model_id)
                 return result
             except Exception as exc:
@@ -292,6 +290,26 @@ def _get_impact_hint(model_id: str) -> str:
         return estimate_impact(psi_score=float(psi), regime=str(regime)).summary
     except Exception:
         return ""
+
+
+def _parse_adk_result(adk_result: dict | str, model_id: str | None) -> AgentResponse:
+    """Convert the dict returned by run_adk_analysis into an AgentResponse."""
+    if isinstance(adk_result, str):
+        result = _parse_response(adk_result)
+        result.model_id = model_id
+        return result
+    action = adk_result.get("action", "escalate")
+    if action not in VALID_ACTIONS:
+        action = "escalate"
+    return AgentResponse(
+        recommendation=adk_result.get("recommendation", ""),
+        action=action,
+        confidence=float(adk_result.get("confidence", 0.5)),
+        reasoning=adk_result.get("reasoning", ""),
+        sources=adk_result.get("sources", []),
+        model_id=model_id,
+        regime=adk_result.get("regime"),
+    )
 
 
 def _parse_response(content: str) -> AgentResponse:
