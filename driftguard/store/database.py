@@ -92,8 +92,15 @@ class AgentDecisionLog(SQLModel, table=True):
     model_version_id: Optional[int] = Field(default=None, foreign_key="modelversion.id")
 
 
-sqlite_url = "sqlite:///./driftguard.db"
-engine = create_engine(sqlite_url, echo=False)
+import os
+
+_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./driftguard.db")
+
+_engine_kwargs: dict = {"echo": False}
+if _DATABASE_URL.startswith("sqlite"):
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(_DATABASE_URL, **_engine_kwargs)
 
 
 def create_db():
