@@ -105,6 +105,7 @@ class DriftGuardAgent:
         result = _parse_response(response.content)
         result.model_id = model_id
         result = _apply_self_eval(result, model_id)
+        _maybe_create_approval(result, model_id)
         _maybe_notify(result, model_id)
         return result
 
@@ -244,7 +245,42 @@ def _dispatch_tool_call(name: str, arguments: dict) -> object:
     return {"error": f"Unknown tool: {name!r}"}
 
 
+_HIGH_RISK_ACTIONS = frozenset({"halt", "freeze", "retrain", "escalate"})
 _NOTIFY_ACTIONS = frozenset({"halt", "freeze", "escalate", "retrain", "investigate"})
+
+
+def _maybe_create_approval(result: AgentResponse, model_id: str | None) -> None:
+    """
+    For high-risk actions, create an ApprovalQueue record and fire notifications.
+    Best-effort — never raises.
+    """
+    if not result or result.action not in _HIGH_RISK_ACTIONS:
+        return
+    effective_model_id = model_id or result.model_id or ""
+    try:
+        from driftguard.store.database import ApprovalQueue, get_session
+        from finsight.notifications.approval_notifier import send_approval_notification
+        from sqlmodel import Session
+        from driftguard.store.database import engine
+
+        approval = ApprovalQueue(
+            model_id=effective_model_id,
+            action=result.action,
+            recommendation=result.recommendation,
+            regime=result.regime or "unknown",
+            confidence=result.confidence,
+            status="pending",
+        )
+        with Session(engine) as session:
+            session.add(approval)
+            session.commit()
+            session.refresh(approval)
+
+        result.requires_approval = True
+        result.approval_id = approval.id
+        send_approval_notification(approval)
+    except Exception as exc:
+        logger.warning("_maybe_create_approval failed: %s", exc)
 
 
 def _maybe_notify(result: AgentResponse, model_id: str | None) -> None:
