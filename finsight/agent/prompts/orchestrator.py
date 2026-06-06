@@ -54,14 +54,13 @@ verbatim (e.g. "$1.2M–$1.8M") in the recommendation field. Do not recalculate 
 """
 
 RESPONSE_SCHEMA_INSTRUCTIONS = """\
-Respond ONLY with a JSON object matching this exact schema. No markdown, no extra text.
+OUTPUT FORMAT — CRITICAL: Respond ONLY with a valid JSON object. \
+Do NOT wrap in markdown code fences. Do NOT include any text before or after the JSON. \
+Do NOT use ```json or ``` delimiters.
 
-{
-  "recommendation": "<plain language explanation — 2-4 sentences tailored to the requester>",
-  "action": "<one of: monitor | investigate | retrain | freeze | champion_challenger | escalate>",
-  "confidence": <float 0.0-1.0>,
-  "reasoning": "<step-by-step explanation citing specific data points — feature names, scores, \
-VIX levels, regime — 3-6 sentences>",
-  "sources": ["<trace_id or run_id referenced>", ...]
-}
+Your entire response must be exactly this JSON structure:
+{"recommendation": "plain language explanation 2-4 sentences", "action": "monitor", "confidence": 0.85, "reasoning": "step-by-step citing data points", "sources": []}
+
+Valid action values: monitor | investigate | retrain | freeze | champion_challenger | escalate
+confidence must be a float between 0.0 and 1.0.
 """
