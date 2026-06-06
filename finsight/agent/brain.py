@@ -312,14 +312,22 @@ def _parse_adk_result(adk_result: dict | str, model_id: str | None) -> AgentResp
     )
 
 
+def _strip_gemini_fences(content: str) -> str:
+    """Remove markdown code fences that Gemini adds despite being told not to."""
+    # Remove ```json ... ``` and ``` ... ``` wrappers
+    stripped = re.sub(r"```(?:json)?\s*", "", content)
+    stripped = re.sub(r"```", "", stripped).strip()
+    # Gemini sometimes adds a trailing comma before the closing brace
+    stripped = re.sub(r",\s*\}", "}", stripped)
+    return stripped
+
+
 def _parse_response(content: str) -> AgentResponse:
     """
     Extract and validate the JSON recommendation from LLM output.
-    Handles markdown code fences. Falls back to action=escalate on any parse failure.
+    Handles Gemini markdown fences and trailing commas. Falls back to action=escalate on failure.
     """
-    # Strip markdown code fences if present
-    cleaned = re.sub(r"```(?:json)?\s*", "", content)
-    cleaned = re.sub(r"```", "", cleaned).strip()
+    cleaned = _strip_gemini_fences(content)
 
     match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if not match:
