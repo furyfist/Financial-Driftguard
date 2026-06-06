@@ -78,6 +78,20 @@ class WebhookConfigRecord(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class ApprovalQueue(SQLModel, table=True):
+    """Human-in-the-loop gate — high-risk agent actions wait here for approval."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    model_id: str = Field(index=True)
+    action: str                        # halt | retrain | freeze | escalate
+    recommendation: str
+    regime: str
+    confidence: float
+    status: str = "pending"            # pending | approved | rejected
+    responded_by: Optional[str] = None
+    responded_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class AgentDecisionLog(SQLModel, table=True):
     """Audit log — every agent recommendation persisted for governance traceability."""
     id: Optional[int] = Field(default=None, primary_key=True)
