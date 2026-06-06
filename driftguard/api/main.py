@@ -71,9 +71,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    os.getenv("FRONTEND_URL", ""),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[o for o in _CORS_ORIGINS if o],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -110,6 +116,10 @@ except ImportError:
     logging.getLogger(__name__).warning(
         "finsight not installed — /trust routes disabled"
     )
+
+from .routes.approvals import router as _approvals_router, webhook_router as _webhook_router
+app.include_router(_approvals_router)
+app.include_router(_webhook_router)
 
 
 @app.get("/health")
