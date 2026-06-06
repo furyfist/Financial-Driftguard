@@ -60,3 +60,12 @@ export const experimentsApi = {
 export const featureMetaApi = {
   get: () => api.get<Record<string, string>>("/drift/feature-meta").then(r => r.data),
 }
+
+export const approvalsApi = {
+  list: (status?: string) =>
+    api.get("/approvals", { params: status ? { status } : {} }).then(r => r.data),
+  approve: (id: number) =>
+    api.post(`/approvals/${id}/approve`).then(r => r.data),
+  reject: (id: number) =>
+    api.post(`/approvals/${id}/reject`).then(r => r.data),
+}
