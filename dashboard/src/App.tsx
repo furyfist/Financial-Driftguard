@@ -4,6 +4,7 @@ import { ModelDetail }     from "./pages/ModelDetail"
 import { Settings }        from "./pages/Settings"
 import { ExperimentView }  from "./pages/ExperimentView"
 import { AgentView }       from "./pages/AgentView"
+import { ApprovalsView }   from "./pages/ApprovalsView"
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/settings"        element={<Settings />} />
         <Route path="/experiments"     element={<ExperimentView />} />
         <Route path="/agent"           element={<AgentView />} />
+        <Route path="/approvals"       element={<ApprovalsView />} />
       </Routes>
     </BrowserRouter>
   )
