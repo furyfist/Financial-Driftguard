@@ -58,17 +58,41 @@ def _openai_messages_to_gemini(
     messages: list[dict],
 ) -> tuple[str | None, list[types.Content]]:
     """Split OpenAI messages into a system instruction and Gemini Content list."""
+    import json as _json
     system_instruction = None
     contents: list[types.Content] = []
     for msg in messages:
-        role, text = msg["role"], msg.get("content") or ""
+        role = msg["role"]
+        text = msg.get("content") or ""
         if role == "system":
             system_instruction = text
         elif role == "user":
             contents.append(types.Content(role="user", parts=[types.Part(text=text)]))
         elif role == "assistant":
-            # Gemini uses "model" for the assistant turn
-            contents.append(types.Content(role="model", parts=[types.Part(text=text)]))
+            parts = []
+            if text:
+                parts.append(types.Part(text=text))
+            for tc in msg.get("tool_calls") or []:
+                fn = tc.get("function", {})
+                args = fn.get("arguments", "{}")
+                args_dict = _json.loads(args) if isinstance(args, str) else args
+                parts.append(types.Part(function_call=types.FunctionCall(
+                    name=fn.get("name", ""),
+                    args=args_dict,
+                )))
+            if parts:
+                contents.append(types.Content(role="model", parts=parts))
+        elif role == "tool":
+            raw = msg.get("content", "{}")
+            result_dict = _json.loads(raw) if isinstance(raw, str) else raw
+            tool_name = msg.get("name", "tool_result")
+            contents.append(types.Content(
+                role="user",
+                parts=[types.Part(function_response=types.FunctionResponse(
+                    name=tool_name,
+                    response=result_dict,
+                ))],
+            ))
     return system_instruction, contents
 
 
@@ -76,9 +100,9 @@ class GeminiProvider(BaseLLMProvider):
     """Google Gemini provider using the google-genai SDK."""
 
     def __init__(self, role: str = "reasoning") -> None:
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY is not set")
+            raise ValueError("GEMINI_API_KEY or GOOGLE_GENAI_API_KEY must be set")
         model_env = "LLM_REASONING_MODEL" if role == "reasoning" else "LLM_FAST_MODEL"
         default = _REASONING_MODEL if role == "reasoning" else _FAST_MODEL
         self._model = os.getenv(model_env, default)
