@@ -48,6 +48,10 @@ class AgentResponse:
     sources: list[str] = field(default_factory=list)
     model_id: str | None = None
     regime: str | None = None
+    self_eval_accuracy: float | None = None
+    confidence_adjusted: bool = False
+    requires_approval: bool = False
+    approval_id: int | None = None
 
 
 class DriftGuardAgent:
@@ -100,6 +104,7 @@ class DriftGuardAgent:
         response = self._run_tool_loop(messages)
         result = _parse_response(response.content)
         result.model_id = model_id
+        result = _apply_self_eval(result, model_id)
         _maybe_notify(result, model_id)
         return result
 
@@ -141,6 +146,7 @@ class DriftGuardAgent:
         response = self._run_tool_loop(messages)
         result = _parse_response(response.content)
         result.model_id = model_id
+        result = _apply_self_eval(result, model_id)
         _maybe_notify(result, model_id)
 
         if memory is not None:
@@ -290,6 +296,39 @@ def _get_impact_hint(model_id: str) -> str:
         return estimate_impact(psi_score=float(psi), regime=str(regime)).summary
     except Exception:
         return ""
+
+
+def _apply_self_eval(result: AgentResponse, model_id: str | None) -> AgentResponse:
+    """
+    Query the agent's own past performance via self_eval_tools and adjust confidence.
+    Best-effort — any failure leaves the result unchanged.
+    """
+    if not model_id:
+        return result
+    try:
+        from finsight.agent.tools.self_eval_tools import (
+            evaluate_past_recommendations,
+            get_confidence_adjustment,
+        )
+        eval_data = evaluate_past_recommendations(model_id=model_id, window_days=30)
+        regime = (result.regime or "unknown").lower()
+        regime_accuracy = eval_data.get("accuracies", {}).get(regime)
+        overall_accuracy = eval_data.get("overall_accuracy", 0.0)
+        accuracy = regime_accuracy if regime_accuracy is not None else overall_accuracy
+
+        result.self_eval_accuracy = accuracy
+
+        if accuracy > 0:
+            adj = get_confidence_adjustment(regime, accuracy)
+            if adj.direction == "increase":
+                result.confidence = min(1.0, result.confidence + adj.magnitude)
+                result.confidence_adjusted = True
+            elif adj.direction == "decrease":
+                result.confidence = max(0.0, result.confidence - adj.magnitude)
+                result.confidence_adjusted = True
+    except Exception as exc:
+        logger.debug("_apply_self_eval skipped: %s", exc)
+    return result
 
 
 def _parse_adk_result(adk_result: dict | str, model_id: str | None) -> AgentResponse:
