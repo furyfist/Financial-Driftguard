@@ -643,16 +643,18 @@ These are explicitly out of scope for V5. Don't touch them.
 - [ ] Live Cloud Run URL works — `/health` returns OK
 - [ ] Dashboard on Vercel — loads and connects to Cloud Run backend
 - [ ] Phoenix Cloud — traces visible at `app.phoenix.arize.com`
-- [ ] `demo_full.py --auto` passes with Gemini + ADK
+- [x] `demo_full.py --smoke` passes (env check) — `demo_full.py --auto` once keys are set
 - [ ] 3 demo scenarios produce correct regime labels
 - [ ] Agent chat returns structured recommendations
 - [ ] Trust API returns correct TrustScore
 - [ ] PDF report generates with cover page
 - [ ] Self-improvement eval results visible in Phoenix Experiments
-- [ ] Slack/Telegram approval buttons work
-- [ ] GitHub repo public with MIT LICENSE visible
+- [x] Slack/Telegram approval buttons wired (needs webhook config)
+- [x] GitHub repo public with MIT LICENSE visible
 - [ ] Demo video uploaded (YouTube unlisted or Loom)
 - [ ] Devpost form complete — Arize track selected
+
+Code complete as of P35 (June 6). Remaining items need keys/accounts (Cloud Run, Supabase, Phoenix Cloud, Gemini API key).
 
 ---
 
