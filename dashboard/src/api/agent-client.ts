@@ -13,9 +13,13 @@
 import axios from "axios"
 import type { AgentResponse, AgentLogEntry, TrustScore } from "../types"
 
-const BASE = "http://localhost:8000"
+const BASE    = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+const API_KEY = import.meta.env.VITE_API_KEY ?? ""
 
-const api = axios.create({ baseURL: BASE })
+const api = axios.create({
+  baseURL: BASE,
+  headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+})
 
 // ── Conversational agent ───────────────────────────────────────────────────────
 
