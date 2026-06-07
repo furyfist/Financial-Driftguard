@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Every LLM call uses low temperature — governance decisions must be deterministic
 _TEMPERATURE = 0.2
-MAX_TOOL_ITERATIONS = 8
+MAX_TOOL_ITERATIONS = 6
 
 ALL_TOOLS = PHOENIX_TOOLS + DRIFT_TOOLS + MACRO_TOOLS + EXPERIMENT_TOOLS + TRUST_TOOLS + QUERY_TOOLS
 
