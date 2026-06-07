@@ -228,7 +228,7 @@ def push_eval_results_to_phoenix(results: dict, experiment_name: str) -> None:
         }
         headers = {}
         if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+            headers["api_key"] = api_key
 
         with httpx.Client(timeout=15.0) as client:
             resp = client.post(
