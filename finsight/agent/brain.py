@@ -14,10 +14,8 @@ from finsight.agent.tools.experiment_tools import EXPERIMENT_TOOLS, call_experim
 from finsight.agent.tools.trust_tools import TRUST_TOOLS, call_trust_tool
 from finsight.agent.tools.query_tools import QUERY_TOOLS, call_query_tool
 
-try:
-    from finsight.adk.config import is_adk_enabled as _is_adk_enabled
-except ImportError:
-    def _is_adk_enabled() -> bool: return False
+def _is_adk_enabled() -> bool:
+    return False
 
 logger = logging.getLogger(__name__)
 
@@ -387,12 +385,10 @@ def _parse_adk_result(adk_result: dict | str, model_id: str | None) -> AgentResp
     )
 
 
-def _strip_gemini_fences(content: str) -> str:
-    """Remove markdown code fences that Gemini adds despite being told not to."""
-    # Remove ```json ... ``` and ``` ... ``` wrappers
+def _strip_llm_fences(content: str) -> str:
+    """Remove markdown code fences that LLMs add despite being told not to."""
     stripped = re.sub(r"```(?:json)?\s*", "", content)
     stripped = re.sub(r"```", "", stripped).strip()
-    # Gemini sometimes adds a trailing comma before the closing brace
     stripped = re.sub(r",\s*\}", "}", stripped)
     return stripped
 
@@ -400,9 +396,9 @@ def _strip_gemini_fences(content: str) -> str:
 def _parse_response(content: str) -> AgentResponse:
     """
     Extract and validate the JSON recommendation from LLM output.
-    Handles Gemini markdown fences and trailing commas. Falls back to action=escalate on failure.
+    Handles markdown fences and trailing commas. Falls back to action=escalate on failure.
     """
-    cleaned = _strip_gemini_fences(content)
+    cleaned = _strip_llm_fences(content)
 
     match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if not match:
