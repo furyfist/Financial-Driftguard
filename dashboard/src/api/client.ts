@@ -2,7 +2,13 @@ import axios from "axios"
 import type { Model, DriftRun, FeatureResult, Alert, ModelVersion } from "../types"
 import type { MacroSnapshot, WebhookConfig, DriftForecast, ChallengerResult } from "../types"
 
-const api = axios.create({ baseURL: "http://localhost:8000" })
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+const API_KEY  = import.meta.env.VITE_API_KEY ?? ""
+
+const api = axios.create({
+  baseURL: API_BASE,
+  headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+})
 
 export const modelsApi = {
   list: () => api.get<Model[]>("/models/").then(r => r.data),
