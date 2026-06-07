@@ -64,31 +64,32 @@ EXPECTED_REGIMES = {
 
 
 def run_smoke_check() -> int:
-    """Validate Gemini + ADK environment without making LLM calls. Returns exit code."""
-    print("\n── V5 Gemini + ADK Smoke Check ──\n")
+    """Validate Groq + native environment without making LLM calls. Returns exit code."""
+    print("\n── FinSight AI Smoke Check ──\n")
     checks = [
-        ("LLM_PROVIDER == gemini",       os.getenv("LLM_PROVIDER", "").lower() == "gemini"),
-        ("GEMINI_API_KEY set",            bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_API_KEY"))),
-        ("AGENT_FRAMEWORK == adk",        os.getenv("AGENT_FRAMEWORK", "").lower() == "adk"),
+        ("LLM_PROVIDER == groq",          os.getenv("LLM_PROVIDER", "").lower() == "groq"),
+        ("GROQ_API_KEY set",              bool(os.getenv("GROQ_API_KEY"))),
+        ("AGENT_FRAMEWORK == native",     os.getenv("AGENT_FRAMEWORK", "").lower() == "native"),
         ("PHOENIX_COLLECTOR_ENDPOINT set",bool(os.getenv("PHOENIX_COLLECTOR_ENDPOINT"))),
         ("PHOENIX_API_KEY set",           bool(os.getenv("PHOENIX_API_KEY"))),
         ("DATABASE_URL set",              bool(os.getenv("DATABASE_URL"))),
         ("LLM_REASONING_MODEL set",       bool(os.getenv("LLM_REASONING_MODEL"))),
         ("LLM_FAST_MODEL set",            bool(os.getenv("LLM_FAST_MODEL"))),
+        ("FRED_API_KEY set",              bool(os.getenv("FRED_API_KEY"))),
     ]
 
     import importlib.util
-    adk_available = importlib.util.find_spec("google.adk") is not None
-    oi_available = importlib.util.find_spec("openinference.instrumentation.google_adk") is not None
+    groq_available = importlib.util.find_spec("groq") is not None
+    oi_available = importlib.util.find_spec("openinference.instrumentation") is not None
     checks += [
-        ("google-adk importable",         adk_available),
-        ("openinference-instrumentation-google-adk importable", oi_available),
+        ("groq importable",               groq_available),
+        ("openinference-instrumentation importable", oi_available),
     ]
 
     passed = failed = 0
     for label, ok in checks:
-        mark = "✅" if ok else "❌"
-        print(f"  {mark}  {label}")
+        mark = "OK" if ok else "XX"
+        print(f"  [{mark}]  {label}")
         if ok:
             passed += 1
         else:
@@ -96,9 +97,9 @@ def run_smoke_check() -> int:
 
     print(f"\n  {passed}/{passed + failed} checks passed")
     if failed > 0:
-        print("  Set missing env vars before the submission run.\n")
+        print("  Set missing env vars before running. See docs/v5_setup_checklist.md\n")
         return 1
-    print("  All env checks passed — ready for Gemini + ADK run.\n")
+    print("  All env checks passed — ready to run.\n")
     return 0
 
 
@@ -115,9 +116,9 @@ def print_header() -> None:
     print("  opposite actions. No other tool makes this distinction.")
     print()
     print("  Prerequisites:")
-    print("    ✓ Backend running  (uvicorn driftguard.api.main:app --reload)")
-    print("    ✓ Lending Club demo seeded  (python demo/lending_club.py)")
-    print("    ✓ Optionally: Phoenix running  (docker compose up phoenix)")
+    print("    Backend running  : uvicorn driftguard.api.main:app --reload")
+    print("    Demo data seeded : python demo/lending_club.py")
+    print("    Phoenix Cloud    : app.phoenix.arize.com (PHOENIX_API_KEY required)")
     print()
 
 
@@ -168,13 +169,13 @@ def print_summary(results: list[dict]) -> None:
     print()
 
     if all_passed:
-        print("  ✅  All scenarios passed.")
+        print("  All scenarios passed.")
         print()
         print("  What to show judges:")
-        print("    1. Phoenix at http://localhost:6006 — all 3 traces visible")
+        print("    1. Phoenix at app.phoenix.arize.com — all 3 traces visible")
         print("    2. Dashboard at http://localhost:5173 — regime badges + action cards")
         print("    3. /agent — ask 'Is my lending model safe right now?'")
-        print("    4. /agent — 'Generate compliance report' → PDF downloads")
+        print("    4. /agent — 'Generate compliance report' -> PDF downloads")
         print("    5. curl http://localhost:8000/trust/lending_club_v1 — trust score JSON")
     else:
         print("  ⚠️   Some scenarios failed. Check output above.")
