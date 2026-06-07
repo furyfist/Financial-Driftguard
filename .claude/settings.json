@@ -10,7 +10,8 @@
       "Bash(grep -E \"\\\\.\\(md|txt\\)$\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\financial-driftguard\")",
       "Bash(Select-Object Name, PSIsContainer)",
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(findstr /V \"pycache\")"
     ]
   }
 }
