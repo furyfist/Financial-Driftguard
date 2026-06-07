@@ -113,6 +113,10 @@ _DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./driftguard.db")
 _engine_kwargs: dict = {"echo": False}
 if _DATABASE_URL.startswith("sqlite"):
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
+    _log.info("Database: SQLite (local dev)")
+else:
+    _display = _DATABASE_URL.split("@")[-1] if "@" in _DATABASE_URL else _DATABASE_URL
+    _log.info("Database: Postgres — %s", _display)
 
 engine = create_engine(_DATABASE_URL, **_engine_kwargs)
 
