@@ -27,6 +27,9 @@ from datetime import datetime
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from dotenv import load_dotenv
+load_dotenv(ROOT / ".env")
+
 SCENARIOS = [
     {
         "name":   "Scenario 1 — Fed Rate Hike Cycle 2017-2018",
@@ -65,7 +68,7 @@ EXPECTED_REGIMES = {
 
 def run_smoke_check() -> int:
     """Validate Groq + native environment without making LLM calls. Returns exit code."""
-    print("\n── FinSight AI Smoke Check ──\n")
+    print("\n-- FinSight AI Smoke Check --\n")
     checks = [
         ("LLM_PROVIDER == groq",          os.getenv("LLM_PROVIDER", "").lower() == "groq"),
         ("GROQ_API_KEY set",              bool(os.getenv("GROQ_API_KEY"))),
@@ -80,7 +83,10 @@ def run_smoke_check() -> int:
 
     import importlib.util
     groq_available = importlib.util.find_spec("groq") is not None
-    oi_available = importlib.util.find_spec("openinference.instrumentation") is not None
+    try:
+        oi_available = importlib.util.find_spec("openinference.instrumentation") is not None
+    except ModuleNotFoundError:
+        oi_available = False
     checks += [
         ("groq importable",               groq_available),
         ("openinference-instrumentation importable", oi_available),
