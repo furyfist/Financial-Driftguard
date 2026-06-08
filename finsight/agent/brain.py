@@ -191,7 +191,7 @@ class DriftGuardAgent:
             for i, tc in enumerate(response.tool_calls):
                 tool_id = f"call_{iteration}_{i}"
                 try:
-                    result = _dispatch_tool_call(tc.name, tc.arguments)
+                    result = _dispatch_tool_call(tc.name, tc.arguments or {})
                     logger.debug("Tool %s(%s) → %s", tc.name, tc.arguments, str(result)[:120])
                 except Exception as exc:
                     result = {"error": str(exc)}
