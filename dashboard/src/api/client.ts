@@ -2,7 +2,13 @@ import axios from "axios"
 import type { Model, DriftRun, FeatureResult, Alert, ModelVersion } from "../types"
 import type { MacroSnapshot, WebhookConfig, DriftForecast, ChallengerResult } from "../types"
 
-const api = axios.create({ baseURL: "http://localhost:8000" })
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+const API_KEY  = import.meta.env.VITE_API_KEY ?? ""
+
+const api = axios.create({
+  baseURL: API_BASE,
+  headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+})
 
 export const modelsApi = {
   list: () => api.get<Model[]>("/models/").then(r => r.data),
@@ -59,4 +65,13 @@ export const experimentsApi = {
 
 export const featureMetaApi = {
   get: () => api.get<Record<string, string>>("/drift/feature-meta").then(r => r.data),
+}
+
+export const approvalsApi = {
+  list: (status?: string) =>
+    api.get("/approvals", { params: status ? { status } : {} }).then(r => r.data),
+  approve: (id: number) =>
+    api.post(`/approvals/${id}/approve`).then(r => r.data),
+  reject: (id: number) =>
+    api.post(`/approvals/${id}/reject`).then(r => r.data),
 }

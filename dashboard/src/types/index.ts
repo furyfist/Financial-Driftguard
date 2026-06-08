@@ -127,6 +127,19 @@ export type ChallengerWinner =
   | "inconclusive"
   | "no_baseline"
 
+export interface ApprovalItem {
+  id: number
+  model_id: string
+  action: string
+  recommendation: string
+  regime: string
+  confidence: number
+  status: "pending" | "approved" | "rejected"
+  responded_by: string | null
+  responded_at: string | null
+  created_at: string
+}
+
 export interface ChallengerResult {
   model_id: string
   status: string

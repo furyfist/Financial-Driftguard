@@ -11,11 +11,16 @@ def _base_url() -> str:
     return os.getenv("PHOENIX_MCP_BASE_URL", "http://localhost:6006").rstrip("/")
 
 
+def _auth_headers() -> dict:
+    api_key = os.getenv("PHOENIX_API_KEY", "") or os.getenv("PHOENIX_MCP_API_KEY", "")
+    return {"api_key": api_key} if api_key else {}
+
+
 def _get(path: str, params: dict | None = None) -> Any:
     """GET against the Phoenix REST API. Returns parsed JSON or None on any failure."""
     try:
         import httpx
-        with httpx.Client(timeout=10.0) as client:
+        with httpx.Client(timeout=10.0, headers=_auth_headers()) as client:
             resp = client.get(f"{_base_url()}{path}", params=params or {})
             resp.raise_for_status()
             return resp.json()

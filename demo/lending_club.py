@@ -1,8 +1,12 @@
 import json
+import os
 import pickle
 import pandas as pd
 from pathlib import Path
-import requests, json
+import requests
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from driftguard import Monitor, DataSnapshot
 from driftguard.regime.macro_signals import MacroSnapshot
@@ -84,6 +88,12 @@ def run_demo():
 
     return result
 
+def _headers():
+    import os
+    key = os.getenv("API_KEY", "")
+    return {"X-API-Key": key} if key else {}
+
+
 def seed_api():
     _, features, baseline_df, live_df = load_artifacts()
 
@@ -91,7 +101,7 @@ def seed_api():
     reg = requests.post(f"{BASE}/models/", json={
         "model_id": "lending_club_v1",
         "description": "Credit default model trained pre-COVID — LightGBM"
-    })
+    }, headers=_headers())
     if reg.status_code == 201:
         print("Model registered")
     elif reg.status_code == 409:
@@ -103,14 +113,14 @@ def seed_api():
     resp = requests.post(f"{BASE}/drift/lending_club_v1/run", json={
         "records": baseline_df.fillna(0).to_dict("records"),
         "set_as_baseline": True
-    })
+    }, headers=_headers())
     print(f"Baseline set: {resp.status_code}")
 
     # Step 3 — run drift check
     resp = requests.post(f"{BASE}/drift/lending_club_v1/run", json={
         "records": live_df.fillna(0).to_dict("records"),
         "set_as_baseline": False
-    })
+    }, headers=_headers())
     print(f"Drift run: {resp.json()}")
 
 if __name__ == "__main__":

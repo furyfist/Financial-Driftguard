@@ -1,7 +1,17 @@
 import os
+from fastapi import Header
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
+
+def verify_api_key(x_api_key: str = Header(default="")):
+    """Route-level API key check. No-op when API_KEY env var is not set."""
+    api_key = os.getenv("API_KEY", "")
+    if api_key and x_api_key != api_key:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    return x_api_key
 
 
 class APIKeyMiddleware(BaseHTTPMiddleware):

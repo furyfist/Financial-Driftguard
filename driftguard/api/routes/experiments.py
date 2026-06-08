@@ -74,3 +74,31 @@ def get_results(
     if not model:
         raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
     return _run_challenger(model_id)
+
+
+@router.post("/{model_id}/evals")
+def run_governance_evals(model_id: str):
+    """
+    Run LLM-as-Judge governance evals for a model and push results to Phoenix.
+    Evaluates recent agent decisions for regime classification and action appropriateness.
+    """
+    try:
+        from finsight.evals.governance_eval import run_evals
+        results = run_evals(model_id=model_id)
+        return {
+            "experiment_name": results["experiment_name"],
+            "model_id": results["model_id"],
+            "total_evaluated": results["total_evaluated"],
+            "accuracy": results["accuracy"],
+            "correct": results["correct"],
+            "regime_eval_count": results["regime_eval_count"],
+            "action_eval_count": results["action_eval_count"],
+        }
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="FinSight not installed — run: pip install -e '.[llm,tracing,agent]'",
+        )
+    except Exception as exc:
+        logger.error("Governance evals failed for %r: %s", model_id, exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Evals failed: {exc}")

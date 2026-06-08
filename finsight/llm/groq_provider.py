@@ -1,12 +1,16 @@
 """Groq implementation of BaseLLMProvider — llama-3.3-70b (reasoning), llama-3.1-8b (fast)."""
 
 import json
+import logging
 import os
+import time
 from collections.abc import AsyncIterator
 
-from groq import AsyncGroq, Groq
+from groq import AsyncGroq, Groq, RateLimitError
 
 from .provider import BaseLLMProvider, LLMResponse, TokenUsage, ToolCall
+
+logger = logging.getLogger(__name__)
 
 _REASONING_MODEL = "llama-3.3-70b-versatile"
 _FAST_MODEL = "llama-3.1-8b-instant"
@@ -42,7 +46,7 @@ class GroqProvider(BaseLLMProvider):
                 kwargs["tool_choice"] = "auto"
             return self._client.chat.completions.create(**kwargs)
 
-        resp = self._retry(_call)
+        resp = self._retry_groq(_call)
         msg = resp.choices[0].message
 
         tool_calls = None
@@ -76,3 +80,31 @@ class GroqProvider(BaseLLMProvider):
             delta = chunk.choices[0].delta.content
             if delta:
                 yield delta
+
+    def _retry_groq(self, func, retries: int = 4, base_delay: float = 2.0):
+        """Retry with exponential backoff, respecting Groq's retry-after header on 429."""
+        for attempt in range(retries):
+            try:
+                return func()
+            except RateLimitError as exc:
+                if attempt == retries - 1:
+                    raise
+                retry_after = _parse_retry_after(exc)
+                wait = retry_after if retry_after else base_delay * (2 ** attempt)
+                logger.warning("Groq rate limit hit — waiting %.1fs (attempt %d/%d)", wait, attempt + 1, retries)
+                time.sleep(wait)
+            except Exception:
+                if attempt == retries - 1:
+                    raise
+                time.sleep(base_delay * (2 ** attempt))
+
+
+def _parse_retry_after(exc: RateLimitError) -> float | None:
+    """Extract retry-after seconds from a Groq RateLimitError, if present."""
+    try:
+        headers = getattr(exc, "response", None) and exc.response.headers
+        if headers and "retry-after" in headers:
+            return float(headers["retry-after"])
+    except Exception:
+        pass
+    return None

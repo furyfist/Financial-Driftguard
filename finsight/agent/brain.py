@@ -14,16 +14,14 @@ from finsight.agent.tools.experiment_tools import EXPERIMENT_TOOLS, call_experim
 from finsight.agent.tools.trust_tools import TRUST_TOOLS, call_trust_tool
 from finsight.agent.tools.query_tools import QUERY_TOOLS, call_query_tool
 
-try:
-    from finsight.adk.config import is_adk_enabled as _is_adk_enabled
-except ImportError:
-    def _is_adk_enabled() -> bool: return False
+def _is_adk_enabled() -> bool:
+    return False
 
 logger = logging.getLogger(__name__)
 
 # Every LLM call uses low temperature — governance decisions must be deterministic
 _TEMPERATURE = 0.2
-MAX_TOOL_ITERATIONS = 8
+MAX_TOOL_ITERATIONS = 6
 
 ALL_TOOLS = PHOENIX_TOOLS + DRIFT_TOOLS + MACRO_TOOLS + EXPERIMENT_TOOLS + TRUST_TOOLS + QUERY_TOOLS
 
@@ -48,6 +46,10 @@ class AgentResponse:
     sources: list[str] = field(default_factory=list)
     model_id: str | None = None
     regime: str | None = None
+    self_eval_accuracy: float | None = None
+    confidence_adjusted: bool = False
+    requires_approval: bool = False
+    approval_id: int | None = None
 
 
 class DriftGuardAgent:
@@ -75,9 +77,8 @@ class DriftGuardAgent:
             try:
                 from finsight.adk.agents import run_adk_analysis
                 query = f"Analyze model '{model_id}'"
-                adk_text = run_adk_analysis(model_id or "", query)
-                result = _parse_response(adk_text)
-                result.model_id = model_id
+                adk_result = run_adk_analysis(model_id or "", query)
+                result = _parse_adk_result(adk_result, model_id)
                 _maybe_notify(result, model_id)
                 return result
             except Exception as exc:
@@ -101,6 +102,8 @@ class DriftGuardAgent:
         response = self._run_tool_loop(messages)
         result = _parse_response(response.content)
         result.model_id = model_id
+        result = _apply_self_eval(result, model_id)
+        _maybe_create_approval(result, model_id)
         _maybe_notify(result, model_id)
         return result
 
@@ -117,9 +120,8 @@ class DriftGuardAgent:
         if _is_adk_enabled():
             try:
                 from finsight.adk.agents import run_adk_analysis
-                adk_text = run_adk_analysis(model_id or "", query)
-                result = _parse_response(adk_text)
-                result.model_id = model_id
+                adk_result = run_adk_analysis(model_id or "", query)
+                result = _parse_adk_result(adk_result, model_id)
                 _maybe_notify(result, model_id)
                 return result
             except Exception as exc:
@@ -143,6 +145,7 @@ class DriftGuardAgent:
         response = self._run_tool_loop(messages)
         result = _parse_response(response.content)
         result.model_id = model_id
+        result = _apply_self_eval(result, model_id)
         _maybe_notify(result, model_id)
 
         if memory is not None:
@@ -188,7 +191,7 @@ class DriftGuardAgent:
             for i, tc in enumerate(response.tool_calls):
                 tool_id = f"call_{iteration}_{i}"
                 try:
-                    result = _dispatch_tool_call(tc.name, tc.arguments)
+                    result = _dispatch_tool_call(tc.name, tc.arguments or {})
                     logger.debug("Tool %s(%s) → %s", tc.name, tc.arguments, str(result)[:120])
                 except Exception as exc:
                     result = {"error": str(exc)}
@@ -240,7 +243,42 @@ def _dispatch_tool_call(name: str, arguments: dict) -> object:
     return {"error": f"Unknown tool: {name!r}"}
 
 
+_HIGH_RISK_ACTIONS = frozenset({"halt", "freeze", "retrain", "escalate"})
 _NOTIFY_ACTIONS = frozenset({"halt", "freeze", "escalate", "retrain", "investigate"})
+
+
+def _maybe_create_approval(result: AgentResponse, model_id: str | None) -> None:
+    """
+    For high-risk actions, create an ApprovalQueue record and fire notifications.
+    Best-effort — never raises.
+    """
+    if not result or result.action not in _HIGH_RISK_ACTIONS:
+        return
+    effective_model_id = model_id or result.model_id or ""
+    try:
+        from driftguard.store.database import ApprovalQueue, get_session
+        from finsight.notifications.approval_notifier import send_approval_notification
+        from sqlmodel import Session
+        from driftguard.store.database import engine
+
+        approval = ApprovalQueue(
+            model_id=effective_model_id,
+            action=result.action,
+            recommendation=result.recommendation,
+            regime=result.regime or "unknown",
+            confidence=result.confidence,
+            status="pending",
+        )
+        with Session(engine) as session:
+            session.add(approval)
+            session.commit()
+            session.refresh(approval)
+
+        result.requires_approval = True
+        result.approval_id = approval.id
+        send_approval_notification(approval)
+    except Exception as exc:
+        logger.warning("_maybe_create_approval failed: %s", exc)
 
 
 def _maybe_notify(result: AgentResponse, model_id: str | None) -> None:
@@ -294,14 +332,73 @@ def _get_impact_hint(model_id: str) -> str:
         return ""
 
 
+def _apply_self_eval(result: AgentResponse, model_id: str | None) -> AgentResponse:
+    """
+    Query the agent's own past performance via self_eval_tools and adjust confidence.
+    Best-effort — any failure leaves the result unchanged.
+    """
+    if not model_id:
+        return result
+    try:
+        from finsight.agent.tools.self_eval_tools import (
+            evaluate_past_recommendations,
+            get_confidence_adjustment,
+        )
+        eval_data = evaluate_past_recommendations(model_id=model_id, window_days=30)
+        regime = (result.regime or "unknown").lower()
+        regime_accuracy = eval_data.get("accuracies", {}).get(regime)
+        overall_accuracy = eval_data.get("overall_accuracy", 0.0)
+        accuracy = regime_accuracy if regime_accuracy is not None else overall_accuracy
+
+        result.self_eval_accuracy = accuracy
+
+        if accuracy > 0:
+            adj = get_confidence_adjustment(regime, accuracy)
+            if adj.direction == "increase":
+                result.confidence = min(1.0, result.confidence + adj.magnitude)
+                result.confidence_adjusted = True
+            elif adj.direction == "decrease":
+                result.confidence = max(0.0, result.confidence - adj.magnitude)
+                result.confidence_adjusted = True
+    except Exception as exc:
+        logger.debug("_apply_self_eval skipped: %s", exc)
+    return result
+
+
+def _parse_adk_result(adk_result: dict | str, model_id: str | None) -> AgentResponse:
+    """Convert the dict returned by run_adk_analysis into an AgentResponse."""
+    if isinstance(adk_result, str):
+        result = _parse_response(adk_result)
+        result.model_id = model_id
+        return result
+    action = adk_result.get("action", "escalate")
+    if action not in VALID_ACTIONS:
+        action = "escalate"
+    return AgentResponse(
+        recommendation=adk_result.get("recommendation", ""),
+        action=action,
+        confidence=float(adk_result.get("confidence", 0.5)),
+        reasoning=adk_result.get("reasoning", ""),
+        sources=adk_result.get("sources", []),
+        model_id=model_id,
+        regime=adk_result.get("regime"),
+    )
+
+
+def _strip_llm_fences(content: str) -> str:
+    """Remove markdown code fences that LLMs add despite being told not to."""
+    stripped = re.sub(r"```(?:json)?\s*", "", content)
+    stripped = re.sub(r"```", "", stripped).strip()
+    stripped = re.sub(r",\s*\}", "}", stripped)
+    return stripped
+
+
 def _parse_response(content: str) -> AgentResponse:
     """
     Extract and validate the JSON recommendation from LLM output.
-    Handles markdown code fences. Falls back to action=escalate on any parse failure.
+    Handles markdown fences and trailing commas. Falls back to action=escalate on failure.
     """
-    # Strip markdown code fences if present
-    cleaned = re.sub(r"```(?:json)?\s*", "", content)
-    cleaned = re.sub(r"```", "", cleaned).strip()
+    cleaned = _strip_llm_fences(content)
 
     match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if not match:

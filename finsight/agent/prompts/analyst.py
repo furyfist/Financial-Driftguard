@@ -12,5 +12,6 @@ strengthens the signal — disagreement suggests noise.
 4. What is the most likely root cause — regime shift, data pipeline issue, or model decay?
 
 Format: 4 short paragraphs, one per question. Under 200 words total. \
-Reference specific feature names and scores.
+Reference specific feature names and scores. \
+Do NOT use markdown headers, bullet points, or code fences in your response.
 """

@@ -11,10 +11,12 @@ Each scenario pauses so you can walk judges through the output before
 moving to the next. Pass --auto to skip the pauses and run continuously.
 
 Usage:
-  python scripts/demo_full.py           # interactive (pauses between scenarios)
-  python scripts/demo_full.py --auto    # fully automated (CI / recording mode)
+  python scripts/demo_full.py             # interactive
+  python scripts/demo_full.py --auto      # fully automated (CI / recording mode)
+  python scripts/demo_full.py --smoke     # Gemini + ADK env smoke check (no LLM calls)
 """
 
+import os
 import sys
 import time
 import argparse
@@ -24,6 +26,9 @@ from datetime import datetime
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+from dotenv import load_dotenv
+load_dotenv(ROOT / ".env")
 
 SCENARIOS = [
     {
@@ -48,18 +53,60 @@ SEPARATOR = "═" * 65
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="FinSight AI full demo runner")
-    parser.add_argument(
-        "--auto",
-        action="store_true",
-        help="Run all scenarios without pausing",
-    )
-    parser.add_argument(
-        "--delay",
-        type=float,
-        default=3.0,
-        help="Seconds between scenarios in auto mode (default: 3.0)",
-    )
+    parser.add_argument("--auto", action="store_true", help="Run all scenarios without pausing")
+    parser.add_argument("--smoke", action="store_true", help="Smoke-check Gemini + ADK env, then exit")
+    parser.add_argument("--delay", type=float, default=3.0, help="Seconds between scenarios in auto mode")
     return parser.parse_args()
+
+
+EXPECTED_REGIMES = {
+    "rate_hike_2017": {"regime_contains": ["credit_stress", "rate_shock"], "action_not": ["retrain"]},
+    "covid_crash":    {"regime_contains": ["black_swan"],                  "action_in":  ["freeze", "halt"]},
+    "normal_decay":   {"regime_contains": ["stable"],                      "action_in":  ["retrain", "investigate"]},
+}
+
+
+def run_smoke_check() -> int:
+    """Validate Groq + native environment without making LLM calls. Returns exit code."""
+    print("\n-- FinSight AI Smoke Check --\n")
+    checks = [
+        ("LLM_PROVIDER == groq",          os.getenv("LLM_PROVIDER", "").lower() == "groq"),
+        ("GROQ_API_KEY set",              bool(os.getenv("GROQ_API_KEY"))),
+        ("AGENT_FRAMEWORK == native",     os.getenv("AGENT_FRAMEWORK", "").lower() == "native"),
+        ("PHOENIX_COLLECTOR_ENDPOINT set",bool(os.getenv("PHOENIX_COLLECTOR_ENDPOINT"))),
+        ("PHOENIX_API_KEY set",           bool(os.getenv("PHOENIX_API_KEY"))),
+        ("DATABASE_URL set",              bool(os.getenv("DATABASE_URL"))),
+        ("LLM_REASONING_MODEL set",       bool(os.getenv("LLM_REASONING_MODEL"))),
+        ("LLM_FAST_MODEL set",            bool(os.getenv("LLM_FAST_MODEL"))),
+        ("FRED_API_KEY set",              bool(os.getenv("FRED_API_KEY"))),
+    ]
+
+    import importlib.util
+    groq_available = importlib.util.find_spec("groq") is not None
+    try:
+        oi_available = importlib.util.find_spec("openinference.instrumentation") is not None
+    except ModuleNotFoundError:
+        oi_available = False
+    checks += [
+        ("groq importable",               groq_available),
+        ("openinference-instrumentation importable", oi_available),
+    ]
+
+    passed = failed = 0
+    for label, ok in checks:
+        mark = "OK" if ok else "XX"
+        print(f"  [{mark}]  {label}")
+        if ok:
+            passed += 1
+        else:
+            failed += 1
+
+    print(f"\n  {passed}/{passed + failed} checks passed")
+    if failed > 0:
+        print("  Set missing env vars before running. See docs/v5_setup_checklist.md\n")
+        return 1
+    print("  All env checks passed — ready to run.\n")
+    return 0
 
 
 def print_header() -> None:
@@ -75,9 +122,9 @@ def print_header() -> None:
     print("  opposite actions. No other tool makes this distinction.")
     print()
     print("  Prerequisites:")
-    print("    ✓ Backend running  (uvicorn driftguard.api.main:app --reload)")
-    print("    ✓ Lending Club demo seeded  (python demo/lending_club.py)")
-    print("    ✓ Optionally: Phoenix running  (docker compose up phoenix)")
+    print("    Backend running  : uvicorn driftguard.api.main:app --reload")
+    print("    Demo data seeded : python demo/lending_club.py")
+    print("    Phoenix Cloud    : app.phoenix.arize.com (PHOENIX_API_KEY required)")
     print()
 
 
@@ -128,13 +175,13 @@ def print_summary(results: list[dict]) -> None:
     print()
 
     if all_passed:
-        print("  ✅  All scenarios passed.")
+        print("  All scenarios passed.")
         print()
         print("  What to show judges:")
-        print("    1. Phoenix at http://localhost:6006 — all 3 traces visible")
+        print("    1. Phoenix at app.phoenix.arize.com — all 3 traces visible")
         print("    2. Dashboard at http://localhost:5173 — regime badges + action cards")
         print("    3. /agent — ask 'Is my lending model safe right now?'")
-        print("    4. /agent — 'Generate compliance report' → PDF downloads")
+        print("    4. /agent — 'Generate compliance report' -> PDF downloads")
         print("    5. curl http://localhost:8000/trust/lending_club_v1 — trust score JSON")
     else:
         print("  ⚠️   Some scenarios failed. Check output above.")
@@ -144,6 +191,10 @@ def print_summary(results: list[dict]) -> None:
 
 def main() -> None:
     args = parse_args()
+
+    if args.smoke:
+        sys.exit(run_smoke_check())
+
     print_header()
 
     if not args.auto:

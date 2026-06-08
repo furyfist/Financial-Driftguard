@@ -1,0 +1,28 @@
+# Railway environment variables
+# Set these in: Railway dashboard → your service → Variables tab
+# Do NOT commit actual values — this is a reference only
+
+FRED_API_KEY=<your-fred-api-key>
+
+# Database — Supabase pooler URL
+DATABASE_URL=postgresql+psycopg2://postgres.<ref>:<password>@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+
+# LLM
+LLM_PROVIDER=groq
+GROQ_API_KEY=<your-groq-api-key>
+LLM_REASONING_MODEL=llama-3.3-70b-versatile
+LLM_FAST_MODEL=llama-3.1-8b-instant
+AGENT_FRAMEWORK=native
+
+# Phoenix Arize cloud
+PHOENIX_COLLECTOR_ENDPOINT=https://app.phoenix.arize.com/s/himanshu290304/v1/traces
+PHOENIX_MCP_BASE_URL=https://app.phoenix.arize.com/s/himanshu290304
+PHOENIX_PROJECT_NAME=finsight-ai
+PHOENIX_API_KEY=<your-phoenix-api-key>
+PHOENIX_MCP_API_KEY=<your-phoenix-api-key>
+
+# API auth (pick any secret string — set the same in Vercel as VITE_API_KEY)
+API_KEY=<pick-any-secret-string>
+
+# CORS — set to your Vercel frontend URL after deploy
+FRONTEND_URL=https://<your-vercel-app>.vercel.app
