@@ -16,6 +16,7 @@ Usage (backend must be running):
   python demo/scenarios/covid_crash.py
 """
 
+import os
 import sys
 import json
 import time
@@ -27,6 +28,9 @@ import pandas as pd
 # ── path setup ─────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+
+from dotenv import load_dotenv
+load_dotenv(ROOT / ".env")
 
 from driftguard.regime.macro_signals import MacroSnapshot
 
@@ -49,6 +53,11 @@ COVID_MACRO = MacroSnapshot(
 SEPARATOR = "─" * 60
 
 
+def _headers() -> dict:
+    key = os.getenv("API_KEY", "")
+    return {"X-API-Key": key} if key else {}
+
+
 def banner(title: str) -> None:
     print(f"\n{SEPARATOR}")
     print(f"  {title}")
@@ -60,13 +69,13 @@ def check_server() -> None:
         r = requests.get(f"{API_BASE}/health", timeout=5)
         r.raise_for_status()
     except Exception:
-        print("\n❌  Backend not running. Start it with:")
+        print("\n  Backend not running. Start it with:")
         print("    uvicorn driftguard.api.main:app --reload")
         sys.exit(1)
 
 
 def ensure_model_exists() -> None:
-    r = requests.get(f"{API_BASE}/models/{MODEL_ID}", timeout=10)
+    r = requests.get(f"{API_BASE}/models/{MODEL_ID}", headers=_headers(), timeout=10)
     if r.status_code == 404:
         print(f"  Model '{MODEL_ID}' not found — run demo/lending_club.py first")
         sys.exit(1)
@@ -101,6 +110,7 @@ def run_drift_check(records: list[dict]) -> dict:
     r = requests.post(
         f"{API_BASE}/drift/{MODEL_ID}/run",
         json=payload,
+        headers=_headers(),
         timeout=60,
     )
     r.raise_for_status()
@@ -108,7 +118,7 @@ def run_drift_check(records: list[dict]) -> dict:
 
 
 def check_trust_api() -> dict:
-    r = requests.get(f"{API_BASE}/trust/{MODEL_ID}", timeout=10)
+    r = requests.get(f"{API_BASE}/trust/{MODEL_ID}", headers=_headers(), timeout=10)
     if r.status_code == 404:
         return {}           # trust API not wired yet — skip gracefully
     r.raise_for_status()
