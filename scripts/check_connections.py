@@ -32,10 +32,13 @@ def check_db():
             conn.execute(sqlalchemy.text("SELECT 1"))
         print(f"{PASS} Database connected: {url.split('@')[-1]}")
         return True
+    except ModuleNotFoundError as exc:
+        print(f"{FAIL} Database: {exc}")
+        print("       Fix: pip install psycopg2-binary")
+        return False
     except Exception as exc:
         print(f"{FAIL} Database: {exc}")
-        print("       Fix: update DATABASE_URL in .env with the Supabase pooler URL")
-        print("       Supabase dashboard → Project Settings → Database → URI tab")
+        print("       Fix: check DATABASE_URL in .env — needs Supabase pooler URL")
         return False
 
 
