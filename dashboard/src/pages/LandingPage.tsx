@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { Nav }        from "../components/landing/Nav"
 import { Hero }       from "../components/landing/Hero"
 import { Problem }    from "../components/landing/Problem"
@@ -9,16 +10,20 @@ import { CTA }        from "../components/landing/CTA"
 import { Footer }     from "../components/landing/Footer"
 
 export default function LandingPage() {
+  useEffect(() => {
+    document.title = "FinSight AI — Financial Model Governance"
+  }, [])
+
   return (
     <>
       <Nav />
       <main>
-        <Hero />
-        <Problem />
-        <HowItWorks />
-        <Demo />
-        <Proof />
-        <Stack />
+        <section id="hero"><Hero /></section>
+        <section id="problem"><Problem /></section>
+        <section id="how-it-works"><HowItWorks /></section>
+        <section id="demo"><Demo /></section>
+        <section id="proof"><Proof /></section>
+        <section id="stack"><Stack /></section>
         <CTA />
       </main>
       <Footer />

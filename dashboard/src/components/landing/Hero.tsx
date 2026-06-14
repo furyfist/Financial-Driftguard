@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, type Variants } from "framer-motion"
 import { HERO } from "../../lib/constants"
 
 const REGIME_COLORS: Record<string, { bg: string; color: string; dot: string }> = {
@@ -49,13 +49,13 @@ function RegimeBadge() {
   )
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.04 } },
 }
-const wordVariants = {
+const wordVariants: Variants = {
   hidden:  { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
 
 function AnimatedHeadline() {
@@ -161,6 +161,8 @@ export function Hero() {
         </div>
 
         <div
+          role="contentinfo"
+          aria-label="Key statistics"
           style={{
             borderTop: "1px solid rgba(0,0,0,0.08)",
             paddingTop: "1.5rem",

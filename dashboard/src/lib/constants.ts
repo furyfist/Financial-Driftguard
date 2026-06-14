@@ -5,6 +5,7 @@ export const NAV = {
   github: "https://github.com/himanshuraimau/financial-driftguard",
   cta: "See it run →",
   ctaHref: "/dashboard",
+  demoHref: "#demo",
 }
 
 export const HERO = {

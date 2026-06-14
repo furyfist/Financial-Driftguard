@@ -67,6 +67,7 @@ export function Nav() {
             href={NAV.github}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="View on GitHub"
             className="hide-on-mobile"
             style={{
               fontSize: "0.85rem",
@@ -78,6 +79,7 @@ export function Nav() {
           </a>
           <a
             href={NAV.ctaHref}
+            aria-label="Go to the dashboard"
             style={{
               background: "#3C3489",
               color: "#fff",
