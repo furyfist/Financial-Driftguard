@@ -39,7 +39,7 @@ export function Nav() {
         {/* Wordmark */}
         <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
-            width: 26, height: 26, borderRadius: 6, background: "#3C3489",
+            width: 26, height: 26, borderRadius: 6, background: "#2D8C5A",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "0.7rem", fontWeight: 700, color: "#fff",
             fontFamily: "'Geist Mono', monospace", letterSpacing: "-0.02em", flexShrink: 0,
@@ -47,7 +47,7 @@ export function Nav() {
           <span style={{
             fontFamily: "'Geist', sans-serif", fontWeight: 600,
             fontSize: "0.875rem", color: "#2C2C2A", letterSpacing: "-0.01em",
-          }}>Financial <span style={{ color: "#3C3489" }}>DriftGuard</span></span>
+          }}>Financial <span style={{ color: "#2D8C5A" }}>DriftGuard</span></span>
         </a>
 
         {/* Right side */}
@@ -60,7 +60,7 @@ export function Nav() {
           </a>
           <a href={NAV.ctaHref} aria-label="Open the dashboard"
             style={{
-              background: "#3C3489", color: "#fff", borderRadius: 6,
+              background: "#2D8C5A", color: "#fff", borderRadius: 6,
               padding: "7px 18px", fontSize: "0.8125rem", fontWeight: 500,
               textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "-0.01em",
             }}>

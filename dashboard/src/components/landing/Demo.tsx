@@ -19,7 +19,7 @@ function colorLine(line: string): React.ReactNode {
     if (tok === "drift:" || tok === "severity:")
       parts.push(<span key={i} style={{ color: "#F5A623" }}>{tok}</span>)
     else if (tok === "regime:")
-      parts.push(<span key={i} style={{ color: "#A78BFA" }}>{tok}</span>)
+      parts.push(<span key={i} style={{ color: "#4ADE80" }}>{tok}</span>)
     else if (tok === "action:" || tok === "confidence:")
       parts.push(<span key={i} style={{ color: "#34D399" }}>{tok}</span>)
     else
@@ -87,7 +87,7 @@ export function Demo() {
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); runScenario(s) } }}
                 style={{
                   background: isSel ? "#fff" : "#fff",
-                  border: isSel ? `1.5px solid #3C3489` : "1px solid rgba(0,0,0,0.08)",
+                  border: isSel ? `1.5px solid #2D8C5A` : "1px solid rgba(0,0,0,0.08)",
                   borderRadius: 10, padding: "1.25rem",
                   cursor: "pointer",
                   boxShadow: isSel ? "0 0 0 3px rgba(60,52,137,0.1)" : "none",
@@ -100,7 +100,7 @@ export function Demo() {
                     borderRadius: 6, fontSize: "0.6875rem",
                     fontFamily: "'Geist Mono', monospace", padding: "3px 8px", fontWeight: 600,
                   }}>{s.tag}</span>
-                  {isSel && <span style={{ color: "#3C3489", fontSize: "0.75rem", fontWeight: 600 }}>● active</span>}
+                  {isSel && <span style={{ color: "#2D8C5A", fontSize: "0.75rem", fontWeight: 600 }}>● active</span>}
                 </div>
                 <p style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#2C2C2A", marginBottom: 4 }}>{s.title}</p>
                 <p style={{ fontSize: "0.8rem", color: "#5F5E5A", fontFamily: "'Geist Mono', monospace" }}>{s.meta}</p>
@@ -108,7 +108,7 @@ export function Demo() {
                   <button
                     onClick={e => { e.stopPropagation(); runScenario(s) }}
                     style={{
-                      marginTop: "0.75rem", fontSize: "0.8125rem", color: "#3C3489",
+                      marginTop: "0.75rem", fontSize: "0.8125rem", color: "#2D8C5A",
                       fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer",
                     }}
                   >Run →</button>

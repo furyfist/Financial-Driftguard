@@ -2,7 +2,7 @@ import { CTA as COPY } from "../../lib/constants"
 
 export function CTA() {
   return (
-    <section aria-label="Call to action" style={{ background: "#26215C" }}>
+    <section aria-label="Call to action" style={{ background: "#1A5C3A" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "5rem 2rem" }}>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "3rem", alignItems: "center" }}
@@ -27,13 +27,13 @@ export function CTA() {
             <a href="/dashboard"
               aria-label="Open the live dashboard"
               style={{
-                background: "#fff", color: "#26215C",
+                background: "#fff", color: "#1A5C3A",
                 borderRadius: 8, padding: "13px 28px",
                 fontSize: "0.9375rem", fontWeight: 700,
                 textDecoration: "none", textAlign: "center",
                 letterSpacing: "-0.01em", whiteSpace: "nowrap",
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#EEEDFE")}
+              onMouseEnter={e => (e.currentTarget.style.background = "#E1F5EE")}
               onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
             >
               Open Dashboard →

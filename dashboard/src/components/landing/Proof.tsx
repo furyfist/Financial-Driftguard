@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { PROOF } from "../../lib/constants"
 
-const STAT_ACCENTS = ["#3C3489", "#0F6E56", "#854F0B", "#A32D2D"]
+const STAT_ACCENTS = ["#2D8C5A", "#0F6E56", "#854F0B", "#A32D2D"]
 
 function CountUp({ target, suffix, decimals }: { target: number; suffix: string; decimals: number }) {
   const [val, setVal] = useState(0)

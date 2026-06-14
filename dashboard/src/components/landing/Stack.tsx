@@ -34,7 +34,7 @@ export function Stack() {
                 padding: "10px 20px", fontSize: "0.875rem", fontWeight: 600,
                 textDecoration: "none", letterSpacing: "-0.01em",
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#3C3489")}
+              onMouseEnter={e => (e.currentTarget.style.background = "#2D8C5A")}
               onMouseLeave={e => (e.currentTarget.style.background = "#2C2C2A")}
             >
               View on GitHub ↗
@@ -48,8 +48,8 @@ export function Stack() {
                 onMouseEnter={() => setHovered(pill)}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  background: hovered === pill ? "#3C3489" : "#fff",
-                  border: hovered === pill ? "1px solid #3C3489" : "1px solid rgba(0,0,0,0.1)",
+                  background: hovered === pill ? "#2D8C5A" : "#fff",
+                  border: hovered === pill ? "1px solid #2D8C5A" : "1px solid rgba(0,0,0,0.1)",
                   borderRadius: 8, padding: "7px 16px",
                   fontSize: "0.8125rem",
                   color: hovered === pill ? "#fff" : "#2C2C2A",

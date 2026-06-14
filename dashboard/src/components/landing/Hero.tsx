@@ -89,7 +89,7 @@ export function Hero() {
                     fontSize: "clamp(2.75rem, 6.5vw, 5.5rem)",
                     fontWeight: 600,
                     letterSpacing: "-0.04em",
-                    color: li === 2 ? "#3C3489" : "#2C2C2A",
+                    color: li === 2 ? "#2D8C5A" : "#2C2C2A",
                     lineHeight: 1.05,
                   }}
                 >
@@ -117,7 +117,7 @@ export function Hero() {
             </p>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <a href="/dashboard" style={{
-                background: "#3C3489", color: "#fff",
+                background: "#2D8C5A", color: "#fff",
                 padding: "11px 26px", borderRadius: 8,
                 fontSize: "0.9rem", fontWeight: 600,
                 textDecoration: "none", letterSpacing: "-0.01em",

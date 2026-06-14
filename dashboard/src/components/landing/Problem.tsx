@@ -73,10 +73,10 @@ export function Problem() {
           marginTop: "2rem", padding: "1.25rem 1.5rem",
           background: "#fff", borderRadius: 10,
           border: "1px solid rgba(0,0,0,0.07)",
-          borderLeft: "3px solid #3C3489",
+          borderLeft: "3px solid #2D8C5A",
           display: "flex", gap: "1rem", alignItems: "flex-start",
         }}>
-          <span style={{ color: "#3C3489", fontSize: "1.25rem", lineHeight: 1, flexShrink: 0 }}>"</span>
+          <span style={{ color: "#2D8C5A", fontSize: "1.25rem", lineHeight: 1, flexShrink: 0 }}>"</span>
           <p style={{ fontSize: "0.9375rem", color: "#5F5E5A", lineHeight: 1.7, margin: 0 }}>
             {PROBLEM.pullQuote.split("int_rate").map((part, i) =>
               i === 0 ? <span key={i}>{part}</span> : (

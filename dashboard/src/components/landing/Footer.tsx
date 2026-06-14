@@ -3,7 +3,7 @@ import { FOOTER } from "../../lib/constants"
 export function Footer() {
   return (
     <footer style={{
-      background: "#1E1A4E",
+      background: "#124028",
       borderTop: "1px solid rgba(255,255,255,0.07)",
     }}>
       <div style={{

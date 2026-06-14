@@ -64,7 +64,7 @@ export function HowItWorks() {
               >
                 <span style={{
                   fontFamily: "'Geist Mono', monospace", fontSize: "0.75rem",
-                  color: activeIdx === i ? "#3C3489" : "#B4B2A9",
+                  color: activeIdx === i ? "#2D8C5A" : "#B4B2A9",
                   paddingTop: 3, fontWeight: 600,
                   transition: "color 0.25s ease",
                 }}>{step.num}</span>
@@ -90,7 +90,7 @@ export function HowItWorks() {
           }}>
             <div style={{
               fontFamily: "'Geist Mono', monospace", fontSize: "2.5rem", fontWeight: 700,
-              color: "#3C3489", opacity: 0.12, lineHeight: 1, marginBottom: "0.75rem",
+              color: "#2D8C5A", opacity: 0.12, lineHeight: 1, marginBottom: "0.75rem",
               letterSpacing: "-0.04em",
             }}>{active.num}</div>
             <h3 style={{
