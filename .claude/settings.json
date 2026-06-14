@@ -13,7 +13,8 @@
       "Bash(Format-Table -AutoSize)",
       "Bash(findstr /V \"pycache\")",
       "Bash(python -c \"from dotenv import load_dotenv; load_dotenv\\(\\); from driftguard.api.main import app; print\\('app loaded ok'\\)\")",
-      "Bash(pip install *)"
+      "Bash(pip install *)",
+      "Bash(git remote *)"
     ]
   }
 }

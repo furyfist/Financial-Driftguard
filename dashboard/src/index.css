@@ -1,14 +1,38 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
 
 body {
+  background-color: #FFFFFF;
+  color: #2C2C2A;
+  font-family: "Geist", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dashboard body override applied via class */
+body.dashboard-body {
   background-color: #F7F6F3;
   color: #1A1916;
   font-family: "Bricolage Grotesque", sans-serif;
-  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid #3C3489;
+  outline-offset: 2px;
 }
 
 @keyframes pulse-dot {
