@@ -12,18 +12,20 @@ import { Footer }     from "../components/landing/Footer"
 export default function LandingPage() {
   useEffect(() => {
     document.title = "Financial DriftGuard — Model Governance"
+    document.body.classList.add("landing")
+    return () => document.body.classList.remove("landing")
   }, [])
 
   return (
     <>
       <Nav />
       <main>
-        <section id="hero"><Hero /></section>
-        <section id="problem"><Problem /></section>
-        <section id="how-it-works"><HowItWorks /></section>
+        <Hero />
+        <Problem />
+        <HowItWorks />
         <section id="demo"><Demo /></section>
-        <section id="proof"><Proof /></section>
-        <section id="stack"><Stack /></section>
+        <Proof />
+        <Stack />
         <CTA />
       </main>
       <Footer />
