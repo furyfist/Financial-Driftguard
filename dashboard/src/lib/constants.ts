@@ -1,9 +1,9 @@
-export const SITE_NAME = "FinSight AI"
+export const SITE_NAME = "Financial DriftGuard"
 
 export const NAV = {
-  wordmark: "FinSight AI",
+  wordmark: "Financial DriftGuard",
   github: "https://github.com/himanshuraimau/financial-driftguard",
-  cta: "See it run →",
+  cta: "Open Dashboard →",
   ctaHref: "/dashboard",
   demoHref: "#demo",
 }
@@ -13,7 +13,7 @@ export const HERO = {
   headline2: "Is the market broken,",
   headline3: "or is your model?",
   subtext:
-    "FinSight AI is the only governance agent that separates regime-driven drift from real model decay — and takes the right action on each.",
+    "Financial DriftGuard is the only governance agent that separates regime-driven drift from real model decay — and takes the right action on each.",
   ctaPrimary: "See it run live",
   ctaSecondary: "Read the docs →",
   stats: ["93.9% accuracy", "30yr macro data", "COVID caught at 1.000"],
@@ -36,7 +36,7 @@ export const PROBLEM = {
     body: "You retrain a model that didn't need retraining.",
   },
   pullQuote:
-    "The 2017–2018 Fed hiking cycle raised int_rate. PSI fired. Every tool said: retrain. FinSight said: don't. The market was the variable.",
+    "The 2017–2018 Fed hiking cycle raised int_rate. PSI fired. Every tool said: retrain. Financial DriftGuard said: don't. The market was the variable.",
 }
 
 export const HOW_IT_WORKS = {
@@ -141,6 +141,6 @@ export const CTA = {
 }
 
 export const FOOTER = {
-  wordmark: "FinSight AI",
+  wordmark: "Financial DriftGuard",
   right: "Built June 2026 · furyfist.com · @furyfist",
 }

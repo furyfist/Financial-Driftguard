@@ -11,7 +11,7 @@ import { Footer }     from "../components/landing/Footer"
 
 export default function LandingPage() {
   useEffect(() => {
-    document.title = "FinSight AI — Financial Model Governance"
+    document.title = "Financial DriftGuard — Model Governance"
   }, [])
 
   return (

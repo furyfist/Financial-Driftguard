@@ -185,7 +185,7 @@ export function Demo() {
             <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#FF5F57", display: "inline-block" }} />
             <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#FFBD2E", display: "inline-block" }} />
             <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#28C840", display: "inline-block" }} />
-            <span style={{ marginLeft: 8, color: "#B4B2A9", fontSize: "0.75rem" }}>finsight — demo</span>
+            <span style={{ marginLeft: 8, color: "#B4B2A9", fontSize: "0.75rem" }}>driftguard — demo</span>
           </div>
 
           {lines.length === 0 && !typing ? (
