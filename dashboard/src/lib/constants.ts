@@ -2,7 +2,7 @@ export const SITE_NAME = "Financial DriftGuard"
 
 export const NAV = {
   wordmark: "Financial DriftGuard",
-  github: "https://github.com/himanshuraimau/financial-driftguard",
+  github: "https://github.com/furyfist/Financial-Driftguard",
   cta: "Open Dashboard →",
   ctaHref: "/dashboard",
   demoHref: "#demo",
@@ -130,14 +130,14 @@ export const STACK = {
     "FastAPI", "LightGBM", "Arize Phoenix", "Groq", "Gemini 2.5 Pro",
     "Google ADK 2.0", "React + Vite", "Docker", "FRED API",
   ],
-  github: "https://github.com/himanshuraimau/financial-driftguard",
+  github: "https://github.com/furyfist/Financial-Driftguard",
 }
 
 export const CTA = {
   line1: "The market will shift.",
   line2: "Your model doesn't have to break.",
   button: "Clone and run it now ↗",
-  href: "https://github.com/himanshuraimau/financial-driftguard",
+  href: "https://github.com/furyfist/Financial-Driftguard",
 }
 
 export const FOOTER = {

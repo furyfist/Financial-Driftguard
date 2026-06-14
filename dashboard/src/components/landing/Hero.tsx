@@ -174,4 +174,4 @@ export function Hero() {
 }
 
 // pulled from constants to avoid circular
-const NAV_GITHUB = "https://github.com/himanshuraimau/financial-driftguard"
+const NAV_GITHUB = "https://github.com/furyfist/Financial-Driftguard"
