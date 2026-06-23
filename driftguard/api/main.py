@@ -80,6 +80,7 @@ _CORS_ORIGINS = [
     os.getenv("FRONTEND_URL", ""),
 ]
 
+app.add_middleware(APIKeyMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o for o in _CORS_ORIGINS if o],
@@ -87,7 +88,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(APIKeyMiddleware)
 
 from .routes import models, drift, alerts, demo, versions
 app.include_router(models.router)
