@@ -61,9 +61,11 @@ export const reportApi = {
    * date_range format: "YYYY-MM-DD/YYYY-MM-DD" (empty → last 30 days)
    */
   generate: async (modelId: string, dateRange = ""): Promise<string> => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    if (API_KEY) headers["X-API-Key"] = API_KEY
     const response = await fetch(`${BASE}/agent/report`, {
       method:  "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body:    JSON.stringify({ model_id: modelId, date_range: dateRange }),
     })
     if (!response.ok) {
