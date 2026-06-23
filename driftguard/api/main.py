@@ -49,8 +49,11 @@ def _warn_missing_env() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_db()
-    migrate_model_versions()
+    try:
+        create_db()
+        migrate_model_versions()
+    except Exception as exc:
+        _log.error("Database connection failed: %s — running without DB (check DATABASE_URL)", exc)
     _warn_missing_env()
     restore_baselines_from_db()
     try:
