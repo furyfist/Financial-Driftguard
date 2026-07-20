@@ -723,6 +723,19 @@ MIT — see [LICENSE](LICENSE)
 - [Lending Club](https://www.kaggle.com/datasets/wordsforthewise/lending-club) — public credit dataset for demo validation
 - [Evidently AI](https://github.com/evidentlyai/evidently), [WhyLogs](https://github.com/whylabs/whylogs), [Arize Phoenix](https://github.com/Arize-ai/phoenix) — reference implementations for model-agnostic wrapping patterns
 
+## FAQ
+
+**Q: What is pending or not working currently?**
+A: See the [Known Limitations](#known-limitations) section. Currently, there is a 0% recall for recessions because their boundaries overlap with credit stress. There is also no API authentication (planned for V3), and the system relies on SQLite and an in-memory notifier registry, meaning webhook configurations are lost on server restart.
+
+**Q: Does it support Telegram and Slack? Why are they mentioned?**
+A: Yes! DriftGuard has a built-in Notifications system. It supports Slack, Telegram, and Discord webhooks to alert your team immediately when significant model drift or macro-economic regime shifts occur.
+
+**Q: How do I run the application on localhost?**
+A: You need to run both the backend API and the frontend dashboard in separate terminals:
+1. **Backend:** Run `uvicorn driftguard.api.main:app --reload` (API at `http://localhost:8000/docs`)
+2. **Frontend:** Navigate to the dashboard folder (`cd dashboard`), install dependencies (`npm install`), and run the dev server (`npm run dev`). (Dashboard at `http://localhost:5173`)
+
 ---
 
 <div align="center">
